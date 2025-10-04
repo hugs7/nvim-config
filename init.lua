@@ -330,6 +330,17 @@ vim.api.nvim_create_user_command("Format", function()
   require("conform").format({ async = true, lsp_fallbask = true })
 end, { desc = "Format current buffer" })
 
+vim.keymap.set("n", "<leader>d", vim.diagnostic.open_float, { desc = "Show diagnostics under cursor" })
+
+-- F12 → go to definition
+vim.keymap.set("n", "<F12>", vim.lsp.buf.definition, { noremap = true, silent = true, desc = "Go to definition" })
+
+-- Shift+F12 → references (like VSCode)
+vim.keymap.set("n", "<S-F12>", vim.lsp.buf.references, { noremap = true, silent = true, desc = "Find references" })
+
+-- Alt+F12 → hover (like peek)
+vim.keymap.set("n", "<A-F12>", vim.lsp.buf.hover, { noremap = true, silent = true, desc = "Hover info" })
+
 -- =========================
 -- TypeScript Import Helpers
 -- =========================
