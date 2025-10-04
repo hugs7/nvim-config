@@ -169,6 +169,15 @@ require("nvim-tree").setup({
     update_root = false,
     ignore_list = {},
   },
+  filters = {
+    git_ignored = false,
+    dotfiles = false,
+    custom = {},
+  },
+  git = {
+    enable = true,
+    ignore = false,
+  },
 })
 
 -- Treesitter
