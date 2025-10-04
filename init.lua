@@ -269,39 +269,32 @@ end, { desc = "Format current buffer" })
 -- =========================
 -- TypeScript Import Helpers
 -- =========================
-
--- Sort/organize imports
-vim.api.nvim_create_user_command("SortImports", function()
+local function organize_imports(bufnr)
   vim.lsp.buf.execute_command({
     command = "_typescript.organizeImports",
-    arguments = { vim.api.nvim_buf_get_name(0) },
+    arguments = { vim.api.nvim_buf_get_name(bufnr or 0) },
   })
+end
+
+local function remove_unused(bufnr)
+  vim.lsp.buf.code_action({
+    apply = true,
+    context = {
+      only = { "source.removeUnused.ts" },
+      diagnostics = {},
+    },
+  })
+end
+
+vim.api.nvim_create_user_command("SortImports", function()
+  organize_imports(0)
 end, { desc = "Sort/Organize TypeScript imports" })
 
--- Remove unused imports
 vim.api.nvim_create_user_command("RemoveUnused", function()
-  vim.lsp.buf.code_action({
-    apply = true,
-    context = {
-      only = { "source.removeUnused.ts" },
-      diagnostics = {},
-    },
-  })
+  remove_unused(0)
 end, { desc = "Remove unused TypeScript imports" })
 
--- Combo: sort + remove
 vim.api.nvim_create_user_command("FixImports", function()
-  -- First remove unused
-  vim.lsp.buf.code_action({
-    apply = true,
-    context = {
-      only = { "source.removeUnused.ts" },
-      diagnostics = {},
-    },
-  })
-  -- Then organize
-  vim.lsp.buf.execute_command({
-    command = "_typescript.organizeImports",
-    arguments = { vim.api.nvim_buf_get_name(0) },
-  })
+  remove_unused(0)
+  organize_imports(0)
 end, { desc = "Sort and remove unused imports" })
