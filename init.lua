@@ -335,6 +335,11 @@ vim.keymap.set("n", "<leader>fb", builtin.buffers, {})
 vim.keymap.set("n", "<leader>fh", builtin.help_tags, {})
 vim.keymap.set("n", "<leader>fw", builtin.grep_string, { desc = "Find word under cursor" })
 
+-- Clear the active live filter
+vim.keymap.set("n", "<leader>cf", function()
+  require("nvim-tree.api").live_filter.clear()
+end, { desc = "Clear NvimTree filter" })
+
 -- =========================
 -- Pane Navigation Shortcuts
 -- =========================
