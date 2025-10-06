@@ -229,7 +229,25 @@ local function on_attach(_, bufnr)
     vim.keymap.set(mode, lhs, rhs, { noremap = true, silent = true, buffer = bufnr })
   end
   bufmap("n", "gd", vim.lsp.buf.definition)
-  bufmap("n", "K", vim.lsp.buf.hover)
+  bufmap("n", "K", function()
+    vim.lsp.buf.hover()
+    -- wait briefly for the hover float to spawn
+    vim.defer_fn(function()
+      for _, win in ipairs(vim.api.nvim_list_wins()) do
+        local cfg = vim.api.nvim_win_get_config(win)
+        if cfg and cfg.relative ~= "" then -- this is a floating window
+          local buf = vim.api.nvim_win_get_buf(win)
+          local ft = vim.api.nvim_get_option_value("filetype", { buf = buf })
+          if ft == "markdown" then
+            vim.api.nvim_set_current_win(win)
+            -- optional: allow q to close the hover window
+            vim.keymap.set("n", "q", "<cmd>close<CR>", { buffer = buf, nowait = true, silent = true })
+            break
+          end
+        end
+      end
+    end, 100)
+  end)
   bufmap("n", "<leader>rn", vim.lsp.buf.rename)
   bufmap("n", "<leader>ca", vim.lsp.buf.code_action)
   bufmap("n", "gr", vim.lsp.buf.references)
