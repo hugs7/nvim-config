@@ -181,6 +181,30 @@ require("lualine").setup({
 
 -- Nvim-tree
 require("nvim-tree").setup({
+  on_attach = function(_, bufnr)
+    local api = require("nvim-tree.api")
+
+    local function opts(desc)
+      return { desc = "nvim-tree: " .. desc, buffer = bufnr, noremap = true, silent = true, nowait = true }
+    end
+
+    -- load defaults first, then override/remove what you don't want
+    api.config.mappings.default_on_attach(bufnr)
+
+    -- remove the Ctrl-based split mappings that conflict with terminal paste
+    pcall(vim.keymap.del, "n", "<C-v>", { buffer = bufnr })
+    pcall(vim.keymap.del, "n", "<C-x>", { buffer = bufnr })
+    pcall(vim.keymap.del, "n", "<C-t>", { buffer = bufnr })
+
+    -- your custom split/tab mappings
+    vim.keymap.set("n", "V", api.node.open.vertical, opts("Open: Vertical Split"))
+    vim.keymap.set("n", "S", api.node.open.horizontal, opts("Open: Horizontal Split"))
+    vim.keymap.set("n", "T", api.node.open.tab, opts("Open: New Tab"))
+
+    -- (optional) quick help and go-up mappings
+    -- vim.keymap.set("n", "?", api.tree.toggle_help, opts("Help"))
+    -- vim.keymap.set("n", "-", api.tree.change_root_to_parent, opts("Up"))
+  end,
   actions = {
     open_file = {
       resize_window = false
