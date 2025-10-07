@@ -361,7 +361,7 @@ end
 -- Register servers using vim.lsp.config (new API)
 local servers = {
   ts_ls = {
-    on_attach = function(client, buffer)
+    on_attach = function(client, bufnr)
       -- disable tsserver formatting so Conform/Prettier takes over
       client.server_capabilities.documentFormattingProvider = false
       client.server_capabilities.documentRangeFormattingProvider = false
@@ -521,7 +521,7 @@ local function organize_imports(bufnr)
   })
 end
 
-local function remove_unused(bufnr)
+local function remove_unused()
   vim.lsp.buf.code_action({
     apply = true,
     context = {
@@ -536,11 +536,11 @@ vim.api.nvim_create_user_command("SortImports", function()
 end, { desc = "Sort/Organize TypeScript imports" })
 
 vim.api.nvim_create_user_command("RemoveUnused", function()
-  remove_unused(0)
+  remove_unused()
 end, { desc = "Remove unused TypeScript imports" })
 
 vim.api.nvim_create_user_command("FixImports", function()
-  remove_unused(0)
+  remove_unused()
   organize_imports(0)
 end, { desc = "Sort and remove unused imports" })
 
