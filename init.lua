@@ -92,7 +92,7 @@ require("lazy").setup({
       local dapui = require("dapui")
 
       require("mason-nvim-dap").setup({
-        ensure_installed = { "node2" },
+        ensure_installed = { "js-debug-adapter" },
       })
 
       dapui.setup()
@@ -108,19 +108,24 @@ require("lazy").setup({
         dapui.close()
       end
 
-      -- Node adapter
-      dap.adapters.node2 = {
-        type = "executable",
-        command = "node",
-        args = {
-          vim.fn.stdpath("data") .. "/mason/packages/node-debug2-adapter/out/src/nodeDebug.js",
+      -- pwa-node adapter (from js-debug-adapter)
+      dap.adapters["pwa-node"] = {
+        type = "server",
+        host = "127.0.0.1",
+        port = "${port}",
+        executable = {
+          command = "node",
+          args = {
+            vim.fn.stdpath("data") .. "/mason/packages/js-debug-adapter/js-debug/src/dapDebugServer.js",
+            "${port}"
+          },
         },
       }
 
       dap.configurations.javascript = {
         {
           name = "Launch current file",
-          type = "node2",
+          type = "pwa-node",
           request = "launch",
           program = "${file}",
           cwd = vim.fn.getcwd(),
@@ -130,7 +135,7 @@ require("lazy").setup({
         },
         {
           name = "Attach to process",
-          type = "node2",
+          type = "pwa-node",
           request = "attach",
           processId = require("dap.utils").pick_process,
         },
@@ -139,10 +144,10 @@ require("lazy").setup({
 
       -- Keymaps
       vim.keymap.set("n", "<F5>", dap.continue)
+      vim.keymap.set("n", "<F9>", dap.toggle_breakpoint)
       vim.keymap.set("n", "<F10>", dap.step_over)
       vim.keymap.set("n", "<F11>", dap.step_into)
       vim.keymap.set("n", "<F12>", dap.step_out)
-      vim.keymap.set("n", "<leader>b", dap.toggle_breakpoint)
     end,
   },
 
