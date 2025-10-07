@@ -251,7 +251,7 @@ require("lualine").setup({
 
 -- Nvim-tree
 require("nvim-tree").setup({
-  on_attach = function(_, bufnr)
+  on_attach = function(bufnr)
     local api = require("nvim-tree.api")
 
     local function opts(desc)
