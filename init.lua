@@ -448,6 +448,15 @@ vim.keymap.set("n", "<C-l>", "<C-w>l")
 vim.keymap.set("n", "<C-k>", "<C-w>k")
 vim.keymap.set("n", "<C-j>", "<C-w>j")
 
+
+-- =========================
+-- Load repo debug config
+-- =========================
+local local_dap = vim.fn.getcwd() .. "/.nvim/dap.lua"
+if vim.fn.filereadable(local_dap) == 1 then
+  dofile(local_dap)
+end
+
 -- =========================
 -- Quality of life keymaps
 -- =========================
