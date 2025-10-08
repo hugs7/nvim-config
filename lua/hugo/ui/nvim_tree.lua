@@ -19,11 +19,6 @@ require("nvim-tree").setup({
     vim.keymap.set("n", "S", api.node.open.horizontal, opts("Open: Horizontal Split"))
     vim.keymap.set("n", "T", api.node.open.tab, opts("Open: New Tab"))
   end,
-  actions = {
-    open_file = {
-      resize_window = false
-    }
-  },
   tab = {
     sync = {
       open = true,  -- open tree in all tabs
