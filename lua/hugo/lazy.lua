@@ -84,7 +84,7 @@ local lazy_plugins = {
           mini = { win_options = { winblend = 0 } },
           cmdline_popup = {
             border = { style = "rounded", text = { top = " COMMAND " } },
-            position = { row = "40%", col = "50%" },
+            position = { row = 1, col = "50%" },
             size = { width = 60 },
           },
         },
