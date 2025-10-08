@@ -50,13 +50,55 @@ local lazy_plugins = {
 
   {
     "Mofiqul/vscode.nvim",
+    lazy = false,
+    priority = 1000,
     config = function()
       require("vscode").setup({
-        transparent = false, -- keep background solid
+        transparent = false,
         italic_comments = true,
         disable_nvimtree_bg = true,
+        color_overrides = {
+          vscLineNumber = "#3E4451",
+          vscCursorLine = "#1f2233",
+          vscDiffAdded = "#00e5ff",
+          vscDiffChanged = "#00b3ff",
+        },
+        group_overrides = {
+          CursorLine = { bg = "#0f111a" },
+          NormalFloat = { bg = "#0f111a" },
+          FloatBorder = { fg = "#00e5ff", bg = "#0f111a" },
+          PmenuSel = { bg = "#00b3ff", fg = "#0f111a" },
+        },
       })
       vim.cmd("colorscheme vscode")
+    end,
+  },
+
+  {
+    "folke/noice.nvim",
+    dependencies = { "MunifTanjim/nui.nvim", "rcarriga/nvim-notify" },
+    config = function()
+      require("noice").setup({
+        presets = { command_palette = true, long_message_to_split = true },
+        views = {
+          mini = { win_options = { winblend = 0 } },
+          cmdline_popup = {
+            border = { style = "rounded", text = { top = " COMMAND " } },
+            position = { row = "40%", col = "50%" },
+            size = { width = 60 },
+          },
+        },
+      })
+    end,
+  },
+
+  {
+    "xiyaowong/nvim-transparent",
+    config = function()
+      require("transparent").setup({
+        enable = true,
+        extra_groups = { "NormalFloat", "NvimTreeNormal", "NormalNC" },
+      })
     end,
   },
 
