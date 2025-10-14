@@ -89,10 +89,15 @@ local lazy_plugins = {
 
   {
     "folke/noice.nvim",
-    dependencies = { "MunifTanjim/nui.nvim", "rcarriga/nvim-notify" },
+    dependencies = { "MunifTanjim/nui.nvim" },
     config = function()
       require("noice").setup({
-        presets = { bottom_search = true, command_palette = true, long_message_to_split = true, inc_rename = true },
+        presets = {
+          bottom_search = true,
+          command_palette = true,
+          long_message_to_split = true,
+          inc_rename = true
+        },
         views = {
           lsp = {
             progress = { enabled = false },
@@ -100,22 +105,17 @@ local lazy_plugins = {
             signature = { enabled = true },
           },
           messages = {
-            enaled = true,
-            view = "notify",
-            view_error = "notify",
-            view_warn = "notify",
-            view_history = "split",
+            enaled = false,
           },
           notify = {
-            enabled = true,
-            view = "notify",
+            enabled = false,
           },
           views = {
-            notify = {
-              replace = true,
-              merge = false,
-              win_options = { winblend = 0 },
-            }
+            -- notify = {
+            --   replace = true,
+            --   merge = false,
+            --   win_options = { winblend = 0 },
+            -- }
           },
           cmdline_popup = {
             border = { style = "rounded", text = { top = " COMMAND " } },
@@ -125,6 +125,17 @@ local lazy_plugins = {
               wrap = true,
               linebreak = true,
               winblend = 0
+            }
+          },
+          routes = {
+            {
+              filter = { event = "msg_show" },
+              view = "cmdline",
+
+            },
+            {
+              filter = { event = "notify" },
+              opts = { skip = true },
             }
           },
         },
