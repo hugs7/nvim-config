@@ -27,10 +27,16 @@ vim.keymap.set("n", "<leader>=", "<cmd>vertical resize +5<CR>", { desc = "Increa
 vim.keymap.set("n", "<leader>-", "<cmd>vertical resize -5<CR>", { desc = "Decrease NvimTree width" })
 
 -- Braile
-vim.keymap.set("n", "<leader>bb", function()
-  require("hugo.ui.braille").overlay()
-end, { desc = "Show Braille overlay" })
+local is_braille_active = false
 
 vim.keymap.set("n", "<leader>br", function()
-  require("hugo.ui.braille").clear()
-end, { desc = "Clear Braille overlay" })
+  local braille = require("hugo.ui.braille")
+
+  if is_braille_active then
+    braille.clear()
+  else
+    braille.overlay()
+  end
+
+  is_braille_active = not is_braille_active
+end, { desc = "Toggle Braille overlay" })
