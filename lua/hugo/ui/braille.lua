@@ -48,18 +48,57 @@ function M.overlay()
     local chars = vim.fn.split(line, '\\zs')
     for col, char in ipairs(chars) do
       local braille = toBraille(char)
-      vim.api.nvim_buf_set_extmark(bufnr, ns, row - 1, col - 1, {
-        virt_text = { { braille, "Normal" } },
+
+      -- Validate highlight group
+      local hl_id = vim.fn.synIDtrans(vim.fn.synID(row, col, true))
+      local hl_group = vim.fn.synIDattr(hl_id, "name")
+
+      -- Guard fallback if invalid
+      if type(hl_group) ~= "string" or hl_group == "" or hl_group == "0" then
+        hl_group = "Normal"
+      end
+
+      if type(braille) ~= "string" then
+        braille = "⠿"
+      end
+
+      local ok, err = pcall(vim.api.nvim_buf_set_extmark, bufnr, ns, row - 1, col - 1, {
+        virt_text = { { braille, hl_group } },
         virt_text_pos = "overlay",
       })
+
+      if not ok then
+        vim.schedule(function()
+          vim.notify(
+            string.format("💥 extmark failed at [%d:%d] — virt_text = { %q, %q }", row, col, braille, hl_group),
+            vim.log.levels.ERROR
+          )
+        end)
+      end
     end
   end
 
   vim.notify("🧿 Braille overlay applied (non-destructive)")
+
+  if M._auto_group then
+    vim.api.nvim_del_autocmd(M._auto_group)
+  end
+
+  M._auto_group = vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, {
+    buffer = bufnr,
+    callback = function()
+      vim.schedule(M.overlay) -- re-render overlay on buffer changes
+    end,
+    desc = "Live Braille overlay",
+  })
 end
 
 function M.clear()
   vim.api.nvim_buf_clear_namespace(0, ns, 0, -1)
+  if M._auto_group then
+    vim.api.nvim_del_autocmd(M._auto_group)
+    M._auto_group = nil
+  end
   vim.notify("🔓 Braille overlay cleared")
 end
 
