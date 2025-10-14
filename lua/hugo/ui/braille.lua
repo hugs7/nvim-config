@@ -47,11 +47,9 @@ local function get_syntax_or_ts_highlight(bufnr, row, col)
     local ok, result = pcall(function()
       local highlights = {}
       active.tree:for_each_tree(function(tstree, ltree)
-        -- local query = ltree and ltree:query()
         local ts = vim.treesitter
         local lang = ltree:lang()
         local query = ts.query.get(lang, "highlights")
-        vim.notify(string.format("ltree: %s", query), vim.log.levels.INFO)
         if not query then return end
         local root = tstree:root()
         if not root then return end
@@ -101,7 +99,6 @@ function M.overlay()
         braille = "⠿"
       end
 
-      vim.notify(string.format("hl_group: %s", hl_group), vim.log.levels.INFO)
       local ok, err = pcall(vim.api.nvim_buf_set_extmark, bufnr, ns, row - 1, col - 1, {
         virt_text = { { braille, hl_group } },
         virt_text_pos = "overlay",
