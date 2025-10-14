@@ -1,26 +1,20 @@
-local utf8 = vim.uv or vim.loop
 local M = {}
-
--- base Braille block (U+2800)
+local ns = vim.api.nvim_create_namespace("braille")
 local base_braille = 0x2800
 
--- Safe utf8.char() substitute
+-- Same UTF-8 encoder as before
 local function uchar(code)
-  -- LuaJIT/Neovim-safe UTF-8 encoder
   if code < 0x80 then
     return string.char(code)
   elseif code < 0x800 then
-    return string.char(
-      0xC0 + math.floor(code / 0x40),
-      0x80 + (code % 0x40)
-    )
+    return string.char(0xC0 + math.floor(code / 0x40), 0x80 + (code % 0x40))
   elseif code < 0x10000 then
     return string.char(
       0xE0 + math.floor(code / 0x1000),
       0x80 + (math.floor(code / 0x40) % 0x40),
       0x80 + (code % 0x40)
     )
-  elseif code < 0x110000 then
+  else
     return string.char(
       0xF0 + math.floor(code / 0x40000),
       0x80 + (math.floor(code / 0x1000) % 0x40),
@@ -45,42 +39,28 @@ local function toBraille(char)
   end
 end
 
-local function fromBraille(char)
-  local code = vim.fn.char2nr(char)
-  local diff = code - base_braille
-  if diff >= 0 and diff <= 25 then
-    return string.char(65 + diff)
-  elseif diff >= 0 and diff <= 9 then
-    return string.char(48 + diff)
-  else
-    return char
+function M.overlay()
+  local bufnr = vim.api.nvim_get_current_buf()
+  vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
+
+  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+  for row, line in ipairs(lines) do
+    local chars = vim.fn.split(line, '\\zs')
+    for col, char in ipairs(chars) do
+      local braille = toBraille(char)
+      vim.api.nvim_buf_set_extmark(bufnr, ns, row - 1, col - 1, {
+        virt_text = { { braille, "Normal" } },
+        virt_text_pos = "overlay",
+      })
+    end
   end
+
+  vim.notify("🧿 Braille overlay applied (non-destructive)")
 end
 
-local function mapLine(line, fn)
-  local chars = vim.fn.split(line, '\\zs') -- UTF‑8 safe split
-  for i, c in ipairs(chars) do
-    chars[i] = fn(c)
-  end
-  return table.concat(chars, "")
-end
-
-function M.to_braille()
-  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-  for i, line in ipairs(lines) do
-    lines[i] = mapLine(line, toBraille)
-  end
-  vim.api.nvim_buf_set_lines(0, 0, -1, false, lines)
-  vim.notify("🔮 Braille mode ON")
-end
-
-function M.from_braille()
-  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-  for i, line in ipairs(lines) do
-    lines[i] = mapLine(line, fromBraille)
-  end
-  vim.api.nvim_buf_set_lines(0, 0, -1, false, lines)
-  vim.notify("🪄 Braille mode OFF")
+function M.clear()
+  vim.api.nvim_buf_clear_namespace(0, ns, 0, -1)
+  vim.notify("🔓 Braille overlay cleared")
 end
 
 return M

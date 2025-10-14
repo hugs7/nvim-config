@@ -28,9 +28,9 @@ vim.keymap.set("n", "<leader>-", "<cmd>vertical resize -5<CR>", { desc = "Decrea
 
 -- Braile
 vim.keymap.set("n", "<leader>bb", function()
-  require("hugo.ui.braille").to_braille()
-end, { desc = "Obfuscate buffer to Braille" })
+  require("hugo.ui.braille").overlay()
+end, { desc = "Show Braille overlay" })
 
 vim.keymap.set("n", "<leader>br", function()
-  require("hugo.ui.braille").from_braille()
-end, { desc = "Restore English from Braille" })
+  require("hugo.ui.braille").clear()
+end, { desc = "Clear Braille overlay" })
