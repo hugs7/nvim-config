@@ -25,3 +25,12 @@ vim.keymap.set("n", "<C-p>", ":Telescope find_files<CR>", { noremap = true, sile
 -- Adjust Nvim Tree Width
 vim.keymap.set("n", "<leader>=", "<cmd>vertical resize +5<CR>", { desc = "Increase NvimTree width" })
 vim.keymap.set("n", "<leader>-", "<cmd>vertical resize -5<CR>", { desc = "Decrease NvimTree width" })
+
+-- Braile
+vim.keymap.set("n", "<leader>bb", function()
+  require("hugo.ui.braille").to_braille()
+end, { desc = "Obfuscate buffer to Braille" })
+
+vim.keymap.set("n", "<leader>br", function()
+  require("hugo.ui.braille").from_braille()
+end, { desc = "Restore English from Braille" })
