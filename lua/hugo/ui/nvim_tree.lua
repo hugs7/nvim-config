@@ -55,9 +55,9 @@ vim.keymap.set("n", "<leader>cf", function()
 end, { desc = "Clear NvimTree filter" })
 
 -- Toggle file tree
--- vim.keymap.set("n", "<leader>b", function()
---   require("nvim-tree.api").tree.toggle({ focus = false })
--- end, { noremap = true, silent = true, desc = "Toggle file tree" })
+vim.keymap.set("n", "<leader>b", function()
+  require("nvim-tree.api").tree.toggle({ focus = false })
+end, { noremap = true, silent = true, desc = "Toggle file tree" })
 
 -- Focus file tree
 vim.keymap.set("n", "<leader>e", function()

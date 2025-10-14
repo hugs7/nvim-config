@@ -39,6 +39,47 @@ local function toBraille(char)
   end
 end
 
+local function get_syntax_or_ts_highlight(bufnr, row, col)
+  -- 1. Try Treesitter
+  local highlighter = require("vim.treesitter.highlighter")
+  local active = highlighter.active[bufnr]
+  if active then
+    local ok, result = pcall(function()
+      local highlights = {}
+      active.tree:for_each_tree(function(tstree, ltree)
+        -- local query = ltree and ltree:query()
+        local ts = vim.treesitter
+        local lang = ltree:lang()
+        local query = ts.query.get(lang, "highlights")
+        vim.notify(string.format("ltree: %s", query), vim.log.levels.INFO)
+        if not query then return end
+        local root = tstree:root()
+        if not root then return end
+
+        for id, node in query:iter_captures(root, bufnr, row, row + 1) do
+          local sr, sc, er, ec = node:range()
+          if row >= sr and row <= er and col >= sc and col < ec then
+            local name = query.captures[id]
+            if name then
+              table.insert(highlights, "@" .. name)
+            end
+          end
+        end
+      end)
+      return highlights[#highlights]
+    end)
+
+    if ok and result then
+      return result
+    end
+  end
+
+  -- 2. Fallback: use legacy syntax group
+  local id = vim.fn.synIDtrans(vim.fn.synID(row + 1, col + 1, true))
+  local name = vim.fn.synIDattr(id, "name")
+  return name ~= "" and name or "Normal"
+end
+
 function M.overlay()
   local bufnr = vim.api.nvim_get_current_buf()
   vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
@@ -49,9 +90,7 @@ function M.overlay()
     for col, char in ipairs(chars) do
       local braille = toBraille(char)
 
-      -- Validate highlight group
-      local hl_id = vim.fn.synIDtrans(vim.fn.synID(row, col, true))
-      local hl_group = vim.fn.synIDattr(hl_id, "name")
+      local hl_group = get_syntax_or_ts_highlight(bufnr, row - 1, col - 1)
 
       -- Guard fallback if invalid
       if type(hl_group) ~= "string" or hl_group == "" or hl_group == "0" then
@@ -62,6 +101,7 @@ function M.overlay()
         braille = "⠿"
       end
 
+      vim.notify(string.format("hl_group: %s", hl_group), vim.log.levels.INFO)
       local ok, err = pcall(vim.api.nvim_buf_set_extmark, bufnr, ns, row - 1, col - 1, {
         virt_text = { { braille, hl_group } },
         virt_text_pos = "overlay",
