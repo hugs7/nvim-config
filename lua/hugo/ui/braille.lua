@@ -115,8 +115,6 @@ function M.overlay()
     end
   end
 
-  vim.notify("🧿 Braille overlay applied (non-destructive)")
-
   if M._auto_group then
     vim.api.nvim_del_autocmd(M._auto_group)
   end
@@ -136,7 +134,6 @@ function M.clear()
     vim.api.nvim_del_autocmd(M._auto_group)
     M._auto_group = nil
   end
-  vim.notify("🔓 Braille overlay cleared")
 end
 
 return M
