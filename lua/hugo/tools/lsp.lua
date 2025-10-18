@@ -48,6 +48,21 @@ local servers = {
   jsonls = {},
   html = {},
   cssls = {},
+  tailwindcss = {
+    settings = {
+      tailwindCSS = {
+        experimental = {
+          classRegex = {
+            -- optional: support for clsx, cva, cn, twMerge etc.
+            "clsx\\(([^)]*)\\)",
+            "cn\\(([^)]*)\\)",
+            "cva\\(([^)]*)\\)",
+            "twMerge\\(([^)]*)\\)",
+          },
+        },
+      },
+    },
+  }
 }
 
 for name, opts in pairs(servers) do
