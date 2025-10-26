@@ -61,6 +61,17 @@ local lazy_plugins = {
     },
   },
 
+  -- Markdown Preview
+  {
+    "iamcco/markdown-preview.nvim",
+    ft = { "markdown" },
+    build = ":call mkdp#util#install()",
+    init = function()
+      vim.g.mkdp_auto_start = 1
+    end
+  },
+
+  -- Theme
   {
     "Mofiqul/vscode.nvim",
     lazy = false,
