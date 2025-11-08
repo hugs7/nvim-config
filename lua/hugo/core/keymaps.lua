@@ -25,3 +25,18 @@ vim.keymap.set("n", "<C-p>", ":Telescope find_files<CR>", { noremap = true, sile
 -- Adjust Nvim Tree Width
 vim.keymap.set("n", "<leader>=", "<cmd>vertical resize +5<CR>", { desc = "Increase NvimTree width" })
 vim.keymap.set("n", "<leader>-", "<cmd>vertical resize -5<CR>", { desc = "Decrease NvimTree width" })
+
+-- Braile
+local is_braille_active = false
+
+vim.keymap.set("n", "<leader>br", function()
+  local braille = require("hugo.ui.braille")
+
+  if is_braille_active then
+    braille.clear()
+  else
+    braille.overlay()
+  end
+
+  is_braille_active = not is_braille_active
+end, { desc = "Toggle Braille overlay" })

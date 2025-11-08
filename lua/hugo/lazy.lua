@@ -158,7 +158,7 @@ local lazy_plugins = {
     "xiyaowong/nvim-transparent",
     config = function()
       require("transparent").setup({
-        enable = true,
+        enable = false,
         extra_groups = { "NormalFloat", "NvimTreeNormal", "NormalNC" },
       })
     end,
