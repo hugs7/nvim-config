@@ -26,7 +26,16 @@ vim.keymap.set("n", "<C-p>", ":Telescope find_files<CR>", { noremap = true, sile
 vim.keymap.set("n", "<leader>=", "<cmd>vertical resize +5<CR>", { desc = "Increase NvimTree width" })
 vim.keymap.set("n", "<leader>-", "<cmd>vertical resize -5<CR>", { desc = "Decrease NvimTree width" })
 
--- Braile
+-- Copy open file path
+vim.keymap.set('n', '<leader>cp', function()
+  local cwd = vim.fn.getcwd()
+  local abs = vim.fn.expand('%:p')
+  local rel = vim.fn.fnamemodify(abs, ':.')
+  vim.fn.setreg('+', rel)
+  print("Copied path: " .. rel)
+end)
+
+-- Braile-- Braile-- Braile
 local is_braille_active = false
 
 vim.keymap.set("n", "<leader>br", function()
