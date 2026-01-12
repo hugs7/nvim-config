@@ -1,5 +1,17 @@
 local M = {}
 
+-- Helper function to determine target directory
+local function get_target_directory()
+  local current_file = vim.fn.expand('%:p')
+  if current_file ~= '' and vim.fn.filereadable(current_file) == 1 then
+    -- If a file is open, use its directory
+    return vim.fn.expand('%:p:h')
+  else
+    -- Fall back to current working directory
+    return vim.fn.getcwd()
+  end
+end
+
 -- Helper function to create files and directories
 local function create_files(dir, files, main_file, success_message)
   vim.fn.mkdir(dir, "p")
@@ -14,7 +26,8 @@ end
 
 -- Helper function to generate component content
 local function generate_component_content(name, with_types)
-  local dir = name
+  local target_dir = get_target_directory()
+  local dir = target_dir .. "/" .. name
   local component_file = dir .. "/" .. name .. ".component.tsx"
   local index_file = dir .. "/index.ts"
   local files = {}
@@ -66,8 +79,9 @@ end
 -- Helper function to generate hook content
 local function generate_hook_content(name, extension, with_types)
   local full_name = "use" .. name
-  local dir = full_name
-  local hook_file = dir .. "/" .. full_name .. "." .. extension
+  local target_dir = get_target_directory()
+  local dir = target_dir .. "/" .. full_name
+  local hook_file = dir .. "/" .. full_name .. ".hook." .. extension
   local index_file = dir .. "/index.ts"
   local files = {}
   
