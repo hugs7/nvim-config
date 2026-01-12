@@ -35,7 +35,11 @@ vim.keymap.set('n', '<leader>cp', function()
   print("Copied path: " .. rel)
 end)
 
--- Braile-- Braile-- Braile
+vim.keymap.set("n", "<leader>rr", function()
+  vim.cmd("restart")
+end, { desc = "Restart Neovim and restore buffers" })
+
+-- Braile--
 local is_braille_active = false
 
 vim.keymap.set("n", "<leader>br", function()
