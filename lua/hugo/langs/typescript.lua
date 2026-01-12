@@ -33,9 +33,9 @@ local function fix_imports_sequential()
   -- Wait a bit then organize imports to avoid timing issues
   vim.defer_fn(function()
     organize_imports(0)
-    
-    -- Save the file after organizing imports
-    vim.cmd("write")
+
+    -- Run formatter after organizing imports
+    require("hugo.plugins.format").format_buffer()
   end, 100)
 end
 

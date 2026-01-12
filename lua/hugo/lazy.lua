@@ -164,7 +164,7 @@ local lazy_plugins = {
     end,
   },
 
-  require("hugo.plugins.format"),
+  require("hugo.plugins.format").config,
   require("hugo.plugins.debug"),
 }
 

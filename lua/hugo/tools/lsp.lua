@@ -27,7 +27,6 @@ local function on_attach(_, bufnr)
   bufmap("n", "<leader>rn", vim.lsp.buf.rename)
   bufmap("n", "<leader>ca", vim.lsp.buf.code_action)
   bufmap("n", "gr", vim.lsp.buf.references)
-  bufmap("n", "<leader>f", function() vim.lsp.buf.format { async = true } end)
 end
 
 -- Register servers using vim.lsp.config (new API)
