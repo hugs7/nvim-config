@@ -8,6 +8,11 @@ local function organize_imports(bufnr)
     command = "_typescript.organizeImports",
     arguments = { vim.api.nvim_buf_get_name(bufnr or 0) },
   })
+
+   -- Wait longer for organize imports to complete before formatting
+    vim.defer_fn(function()
+      require("hugo.plugins.format").format_buffer()
+    end, 50)
 end
 
 local function remove_unused()
@@ -32,18 +37,15 @@ local function fix_imports_sequential()
   
   -- Wait a bit then organize imports to avoid timing issues
   vim.defer_fn(function()
-    organize_imports(0)
-
-    -- Run formatter after organizing imports
-    require("hugo.plugins.format").format_buffer()
-  end, 100)
+    organize_imports()
+  end, 50)
 end
 
 -- Export the function for use in keymaps
 M.fix_imports_sequential = fix_imports_sequential
 
 vim.api.nvim_create_user_command("SortImports", function()
-  organize_imports(0)
+  organize_imports()
 end, { desc = "Sort/Organize TypeScript imports" })
 
 vim.api.nvim_create_user_command("RemoveUnused", function()
