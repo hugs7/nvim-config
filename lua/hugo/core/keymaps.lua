@@ -51,6 +51,12 @@ vim.keymap.set("n", "<leader>br", function()
 end, { desc = "Toggle Braille overlay" })
 
 -- =========================
+-- TypeScript Keymaps
+-- =========================
+local typescript = require("hugo.langs.typescript")
+vim.keymap.set("n", "<leader>fi", typescript.fix_imports_sequential, { desc = "Fix imports (remove unused + organize)" })
+
+-- =========================
 -- React Component Creation
 -- =========================
 local react_components = require("hugo.utils.react-components")
@@ -59,3 +65,4 @@ vim.keymap.set("n", "<leader>rc", react_components.create_component, { desc = "C
 vim.keymap.set("n", "<leader>rct", react_components.create_component_with_types, { desc = "Create React component with types" })
 vim.keymap.set("n", "<leader>rh", react_components.create_hook, { desc = "Create React hook" })
 vim.keymap.set("n", "<leader>rht", react_components.create_hook_with_types, { desc = "Create React hook with types" })
+
