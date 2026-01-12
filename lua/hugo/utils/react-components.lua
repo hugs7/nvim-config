@@ -3,7 +3,7 @@ local M = {}
 -- Helper function to determine target directory
 local function get_target_directory()
   local current_file = vim.fn.expand('%:p')
-  
+
   -- Check if we're in NvimTree
   if vim.bo.filetype == 'NvimTree' then
     local api = require('nvim-tree.api')
@@ -17,22 +17,22 @@ local function get_target_directory()
       end
     end
   end
-  
+
   if current_file ~= '' and vim.fn.filereadable(current_file) == 1 then
     local file_dir = vim.fn.expand('%:p:h')
-    
+
     -- Check if current directory contains component or hook files
     local component_pattern = file_dir .. '/*.component.{ts,tsx}'
     local hook_pattern = file_dir .. '/*.hook.{ts,tsx}'
-    
+
     local component_files = vim.fn.glob(component_pattern, 1, 1)
     local hook_files = vim.fn.glob(hook_pattern, 1, 1)
-    
+
     -- If we find component/hook files in current dir, go up one level
     if #component_files > 0 or #hook_files > 0 then
-      return vim.fn.expand('%:p:h:h')  -- Go up one level
+      return vim.fn.expand('%:p:h:h') -- Go up one level
     else
-      return vim.fn.expand('%:p:h')    -- Use current file's directory
+      return vim.fn.expand('%:p:h')   -- Use current file's directory
     end
   else
     -- Fall back to current working directory
@@ -147,7 +147,7 @@ local function generate_hook_content(name, extension, with_types)
     }
 
     files[index_file] = {
-      'export { ' .. full_name .. ' } from "./' .. full_name .. '";',
+      'export { ' .. full_name .. ' } from "./' .. full_name .. '.hook";',
       'export type { ' .. full_name .. 'Options, ' .. full_name .. 'Return } from "./' .. full_name .. '.types";'
     }
   else
@@ -208,4 +208,3 @@ function M.create_hook_with_types()
 end
 
 return M
-
