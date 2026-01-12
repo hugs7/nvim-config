@@ -29,6 +29,16 @@ local function on_attach(_, bufnr)
   bufmap("n", "gr", vim.lsp.buf.references)
 end
 
+local jstsFormatSettings = {
+  indentSize = 2,
+  tabSize = 2,
+  convertTabsToSpaces = true,
+}
+
+local jstsSettings = {
+  format = jstsFormatSettings,
+}
+
 -- Register servers using vim.lsp.config (new API)
 local servers = {
   ts_ls = {
@@ -41,20 +51,8 @@ local servers = {
       on_attach(client, bufnr)
     end,
     settings = {
-      typescript = {
-        format = {
-          indentSize = 2,
-          tabSize = 2,
-          convertTabsToSpaces = true,
-        },
-      },
-      javascript = {
-        format = {
-          indentSize = 2,
-          tabSize = 2,
-          convertTabsToSpaces = true,
-        },
-      },
+      typescript = jstsSettings,
+      javascript = jstsSettings,
     },
   },
   lua_ls = {
