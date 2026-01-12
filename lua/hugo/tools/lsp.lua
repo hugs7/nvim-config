@@ -40,6 +40,22 @@ local servers = {
       -- still apply your generic on_attach keymaps
       on_attach(client, bufnr)
     end,
+    settings = {
+      typescript = {
+        format = {
+          indentSize = 2,
+          tabSize = 2,
+          convertTabsToSpaces = true,
+        },
+      },
+      javascript = {
+        format = {
+          indentSize = 2,
+          tabSize = 2,
+          convertTabsToSpaces = true,
+        },
+      },
+    },
   },
   lua_ls = {
     settings = { Lua = { diagnostics = { globals = { "vim" } } } },
