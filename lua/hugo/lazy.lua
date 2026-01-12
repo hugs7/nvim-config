@@ -13,7 +13,10 @@ vim.opt.rtp:prepend(lazypath)
 
 local lazy_plugins = {
   -- LSP + tooling
-  { "williamboman/mason.nvim",         build = ":MasonUpdate" },
+  { 
+    "williamboman/mason.nvim",    
+    build = ":MasonUpdate" 
+  },
   "williamboman/mason-lspconfig.nvim",
   "neovim/nvim-lspconfig",
 
