@@ -3,16 +3,19 @@
 -- =========================
 local M = {}
 
+local function deferred_format(delay) 
+  vim.defer_fn(function()
+    require("hugo.plugins.format").format_buffer()
+  end, delay or 0)
+end
+
 local function organize_imports(bufnr)
   vim.lsp.buf.execute_command({
     command = "_typescript.organizeImports",
     arguments = { vim.api.nvim_buf_get_name(bufnr or 0) },
   })
 
-   -- Wait longer for organize imports to complete before formatting
-    vim.defer_fn(function()
-      require("hugo.plugins.format").format_buffer()
-    end, 50)
+  deferred_format()
 end
 
 local function remove_unused()
@@ -28,7 +31,7 @@ end
 local function fix_imports_sequential()
   -- Remove unused imports first
   remove_unused()
-  
+
   -- Wait a bit then organize imports to avoid timing issues
   vim.defer_fn(function()
     organize_imports()
