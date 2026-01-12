@@ -6,7 +6,7 @@ local M = {}
 local function deferred_format(delay) 
   vim.defer_fn(function()
     require("hugo.plugins.format").format_buffer()
-  end, delay or 0)
+  end, delay or 100)
 end
 
 local function organize_imports(bufnr)
