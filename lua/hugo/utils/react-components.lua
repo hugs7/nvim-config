@@ -12,6 +12,16 @@ local function get_target_directory()
   end
 end
 
+-- Helper function to get and validate file extension
+local function get_extension()
+  local extension = vim.fn.input("File extension (.ts/.tsx): ", "ts")
+  if extension ~= "ts" and extension ~= "tsx" then
+    print("Invalid extension. Using .ts")
+    extension = "ts"
+  end
+  return extension
+end
+
 -- Helper function to create files and directories
 local function create_files(dir, files, main_file, success_message)
   vim.fn.mkdir(dir, "p")
@@ -152,11 +162,7 @@ function M.create_hook()
   local name = vim.fn.input("Hook name (without 'use' prefix): ")
   if name == "" then return end
   
-  local extension = vim.fn.input("File extension (.ts/.tsx): ", "ts")
-  if extension ~= "ts" and extension ~= "tsx" then
-    print("Invalid extension. Using .ts")
-    extension = "ts"
-  end
+  local extension = get_extension()
   
   local dir, files, main_file, full_name = generate_hook_content(name, extension, false)
   create_files(dir, files, main_file, "Created hook: " .. full_name)
@@ -167,11 +173,7 @@ function M.create_hook_with_types()
   local name = vim.fn.input("Hook name (without 'use' prefix): ")
   if name == "" then return end
   
-  local extension = vim.fn.input("File extension (.ts/.tsx): ", "ts")
-  if extension ~= "ts" and extension ~= "tsx" then
-    print("Invalid extension. Using .ts")
-    extension = "ts"
-  end
+  local extension = get_extension()
   
   local dir, files, main_file, full_name = generate_hook_content(name, extension, true)
   create_files(dir, files, main_file, "Created hook with types: " .. full_name)
