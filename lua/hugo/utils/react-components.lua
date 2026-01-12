@@ -1,97 +1,142 @@
 local M = {}
 
--- Create basic component structure
-function M.create_component()
-  local component_name = vim.fn.input("Component name: ")
-  if component_name == "" then return end
-  
-  local dir = component_name
-  local component_file = dir .. "/" .. component_name .. ".component.tsx"
-  local index_file = dir .. "/index.ts"
-  
-  -- Create directory
+-- Helper function to create files and directories
+local function create_files(dir, files, main_file, success_message)
   vim.fn.mkdir(dir, "p")
   
-  -- Component file content
-  local component_content = {
-    "export const " .. component_name .. " = () => {",
-    "  return (",
-    "    <div>",
-    "      " .. component_name,
-    "    </div>",
-    "  );",
-    "};"
-  }
+  for file_path, content in pairs(files) do
+    vim.fn.writefile(content, file_path)
+  end
   
-  -- Index file content
-  local index_content = {
-    'export { ' .. component_name .. ' } from "./' .. component_name .. '.component";'
-  }
+  vim.cmd("edit " .. main_file)
+  print(success_message)
+end
+
+-- Helper function to generate component content
+local function generate_component_content(name, with_types)
+  local dir = name
+  local component_file = dir .. "/" .. name .. ".component.tsx"
+  local index_file = dir .. "/index.ts"
+  local files = {}
   
-  -- Write files
-  vim.fn.writefile(component_content, component_file)
-  vim.fn.writefile(index_content, index_file)
+  if with_types then
+    local types_file = dir .. "/" .. name .. ".types.ts"
+    
+    files[types_file] = {
+      "export type " .. name .. "Props = {",
+      "  // Add your props here",
+      "};"
+    }
+    
+    files[component_file] = {
+      'import { ' .. name .. 'Props } from "./' .. name .. '.types";',
+      "",
+      "export const " .. name .. " = (props: " .. name .. "Props) => {",
+      "  return (",
+      "    <div>",
+      "      " .. name,
+      "    </div>",
+      "  );",
+      "};"
+    }
+    
+    files[index_file] = {
+      'export { ' .. name .. ' } from "./' .. name .. '.component";',
+      'export type { ' .. name .. 'Props } from "./' .. name .. '.types";'
+    }
+  else
+    files[component_file] = {
+      "export const " .. name .. " = () => {",
+      "  return (",
+      "    <div>",
+      "      " .. name,
+      "    </div>",
+      "  );",
+      "};"
+    }
+    
+    files[index_file] = {
+      'export { ' .. name .. ' } from "./' .. name .. '.component";'
+    }
+  end
   
-  -- Open component file
-  vim.cmd("edit " .. component_file)
+  return dir, files, component_file
+end
+
+-- Helper function to generate hook content
+local function generate_hook_content(name, extension, with_types)
+  local full_name = "use" .. name
+  local dir = full_name
+  local hook_file = dir .. "/" .. full_name .. "." .. extension
+  local index_file = dir .. "/index.ts"
+  local files = {}
   
-  print("Created component: " .. component_name)
+  if with_types then
+    local types_file = dir .. "/" .. full_name .. ".types.ts"
+    
+    files[types_file] = {
+      "export type " .. full_name .. "Options = {",
+      "  // Add your options here",
+      "};",
+      "",
+      "export type " .. full_name .. "Return = {",
+      "  // Add your return type here",
+      "};"
+    }
+    
+    files[hook_file] = {
+      'import { ' .. full_name .. 'Options, ' .. full_name .. 'Return } from "./' .. full_name .. '.types";',
+      "",
+      "export const " .. full_name .. " = (options?: " .. full_name .. "Options): " .. full_name .. "Return => {",
+      "  // Your hook logic here",
+      "  ",
+      "  return {};",
+      "};"
+    }
+    
+    files[index_file] = {
+      'export { ' .. full_name .. ' } from "./' .. full_name .. '";',
+      'export type { ' .. full_name .. 'Options, ' .. full_name .. 'Return } from "./' .. full_name .. '.types";'
+    }
+  else
+    files[hook_file] = {
+      "export const " .. full_name .. " = () => {",
+      "  // Your hook logic here",
+      "  ",
+      "  return {};",
+      "};"
+    }
+    
+    files[index_file] = {
+      'export { ' .. full_name .. ' } from "./' .. full_name .. '";'
+    }
+  end
+  
+  return dir, files, hook_file, full_name
+end
+
+-- Create basic component structure
+function M.create_component()
+  local name = vim.fn.input("Component name: ")
+  if name == "" then return end
+  
+  local dir, files, main_file = generate_component_content(name, false)
+  create_files(dir, files, main_file, "Created component: " .. name)
 end
 
 -- Create component with types
 function M.create_component_with_types()
-  local component_name = vim.fn.input("Component name: ")
-  if component_name == "" then return end
+  local name = vim.fn.input("Component name: ")
+  if name == "" then return end
   
-  local dir = component_name
-  local component_file = dir .. "/" .. component_name .. ".component.tsx"
-  local types_file = dir .. "/" .. component_name .. ".types.ts"
-  local index_file = dir .. "/index.ts"
-  
-  -- Create directory
-  vim.fn.mkdir(dir, "p")
-  
-  -- Types file content
-  local types_content = {
-    "export type " .. component_name .. "Props = {",
-    "  // Add your props here",
-    "};"
-  }
-  
-  -- Component file content
-  local component_content = {
-    'import { ' .. component_name .. 'Props } from "./' .. component_name .. '.types";',
-    "",
-    "export const " .. component_name .. " = (props: " .. component_name .. "Props) => {",
-    "  return (",
-    "    <div>",
-    "      " .. component_name,
-    "    </div>",
-    "  );",
-    "};"
-  }
-  
-  -- Index file content
-  local index_content = {
-    'export { ' .. component_name .. ' } from "./' .. component_name .. '.component";',
-    'export type { ' .. component_name .. 'Props } from "./' .. component_name .. '.types";'
-  }
-  
-  -- Write files
-  vim.fn.writefile(types_content, types_file)
-  vim.fn.writefile(component_content, component_file)
-  vim.fn.writefile(index_content, index_file)
-  
-  -- Open component file
-  vim.cmd("edit " .. component_file)
-  
-  print("Created component with types: " .. component_name)
+  local dir, files, main_file = generate_component_content(name, true)
+  create_files(dir, files, main_file, "Created component with types: " .. name)
 end
 
 -- Create basic hook
 function M.create_hook()
-  local hook_name = vim.fn.input("Hook name (without 'use' prefix): ")
-  if hook_name == "" then return end
+  local name = vim.fn.input("Hook name (without 'use' prefix): ")
+  if name == "" then return end
   
   local extension = vim.fn.input("File extension (.ts/.tsx): ", "ts")
   if extension ~= "ts" and extension ~= "tsx" then
@@ -99,42 +144,14 @@ function M.create_hook()
     extension = "ts"
   end
   
-  local full_hook_name = "use" .. hook_name
-  local dir = full_hook_name
-  local hook_file = dir .. "/" .. full_hook_name .. "." .. extension
-  local index_file = dir .. "/index.ts"
-  
-  -- Create directory
-  vim.fn.mkdir(dir, "p")
-  
-  -- Hook file content
-  local hook_content = {
-    "export const " .. full_hook_name .. " = () => {",
-    "  // Your hook logic here",
-    "  ",
-    "  return {};",
-    "};"
-  }
-  
-  -- Index file content
-  local index_content = {
-    'export { ' .. full_hook_name .. ' } from "./' .. full_hook_name .. '";'
-  }
-  
-  -- Write files
-  vim.fn.writefile(hook_content, hook_file)
-  vim.fn.writefile(index_content, index_file)
-  
-  -- Open hook file
-  vim.cmd("edit " .. hook_file)
-  
-  print("Created hook: " .. full_hook_name)
+  local dir, files, main_file, full_name = generate_hook_content(name, extension, false)
+  create_files(dir, files, main_file, "Created hook: " .. full_name)
 end
 
 -- Create hook with types
 function M.create_hook_with_types()
-  local hook_name = vim.fn.input("Hook name (without 'use' prefix): ")
-  if hook_name == "" then return end
+  local name = vim.fn.input("Hook name (without 'use' prefix): ")
+  if name == "" then return end
   
   local extension = vim.fn.input("File extension (.ts/.tsx): ", "ts")
   if extension ~= "ts" and extension ~= "tsx" then
@@ -142,52 +159,8 @@ function M.create_hook_with_types()
     extension = "ts"
   end
   
-  local full_hook_name = "use" .. hook_name
-  local dir = full_hook_name
-  local hook_file = dir .. "/" .. full_hook_name .. "." .. extension
-  local types_file = dir .. "/" .. full_hook_name .. ".types.ts"
-  local index_file = dir .. "/index.ts"
-  
-  -- Create directory
-  vim.fn.mkdir(dir, "p")
-  
-  -- Types file content
-  local types_content = {
-    "export type " .. full_hook_name .. "Options = {",
-    "  // Add your options here",
-    "};",
-    "",
-    "export type " .. full_hook_name .. "Return = {",
-    "  // Add your return type here",
-    "};"
-  }
-  
-  -- Hook file content
-  local hook_content = {
-    'import { ' .. full_hook_name .. 'Options, ' .. full_hook_name .. 'Return } from "./' .. full_hook_name .. '.types";',
-    "",
-    "export const " .. full_hook_name .. " = (options?: " .. full_hook_name .. "Options): " .. full_hook_name .. "Return => {",
-    "  // Your hook logic here",
-    "  ",
-    "  return {};",
-    "};"
-  }
-  
-  -- Index file content
-  local index_content = {
-    'export { ' .. full_hook_name .. ' } from "./' .. full_hook_name .. '";',
-    'export type { ' .. full_hook_name .. 'Options, ' .. full_hook_name .. 'Return } from "./' .. full_hook_name .. '.types";'
-  }
-  
-  -- Write files
-  vim.fn.writefile(types_content, types_file)
-  vim.fn.writefile(hook_content, hook_file)
-  vim.fn.writefile(index_content, index_file)
-  
-  -- Open hook file
-  vim.cmd("edit " .. hook_file)
-  
-  print("Created hook with types: " .. full_hook_name)
+  local dir, files, main_file, full_name = generate_hook_content(name, extension, true)
+  create_files(dir, files, main_file, "Created hook with types: " .. full_name)
 end
 
 return M
