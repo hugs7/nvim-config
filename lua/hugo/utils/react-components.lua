@@ -3,9 +3,9 @@ local M = {}
 -- Helper function to determine target directory
 local function get_target_directory()
   local current_file = vim.fn.expand('%:p')
-  if current_file ~= '' and vim.fn.filereadable(current_file) == 1 then
-    -- If a file is open, use its directory
-    return vim.fn.expand('%:p:h')
+if current_file ~= '' and vim.fn.filereadable(current_file) == 1 then
+    -- If a file is open, use its parent directory
+    return vim.fn.expand('%:p:h:h')
   else
     -- Fall back to current working directory
     return vim.fn.getcwd()
