@@ -27,13 +27,7 @@ end
 
 local function fix_imports_sequential()
   -- Remove unused imports first
-  vim.lsp.buf.code_action({
-    apply = true,
-    context = {
-      only = { "source.removeUnused.ts" },
-      diagnostics = {},
-    },
-  })
+  remove_unused()
   
   -- Wait a bit then organize imports to avoid timing issues
   vim.defer_fn(function()
