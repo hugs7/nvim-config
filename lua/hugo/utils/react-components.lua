@@ -160,7 +160,7 @@ local function generate_hook_content(name, extension, with_types)
     }
 
     files[index_file] = {
-      'export { ' .. full_name .. ' } from "./' .. full_name .. '";'
+      'export { ' .. full_name .. ' } from "./' .. full_name .. '.hook";'
     }
   end
 
