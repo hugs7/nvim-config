@@ -26,6 +26,12 @@ require("lualine").setup({
       },
     },
     lualine_x = {
+      -- Show macro recording status from noice
+      {
+        require("noice").api.statusline.mode.get,
+        cond = require("noice").api.statusline.mode.has,
+        color = { fg = "#ff9e64" },
+      },
       { "encoding",   color = { fg = "#5c6370" } },
       { "fileformat", color = { fg = "#5c6370" } },
       { "filetype",   color = { fg = "#00e5ff" } },
