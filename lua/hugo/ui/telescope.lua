@@ -3,11 +3,13 @@
 -- =========================
 require('telescope').setup({
   defaults = {
-    file_ignore_patterns = { "node_modules", ".git/" },
+    file_ignore_patterns = { "node_modules/", ".git/", "dist/", "build/", ".next/" },
   },
   pickers = {
     find_files = {
       hidden = true,  -- Show hidden files (files starting with .)
+      no_ignore = true,  -- Include gitignored files
+      no_ignore_parent = true,  -- Include files ignored by parent .gitignore
     },
   },
 })
