@@ -21,3 +21,16 @@ vim.keymap.set("n", "<leader>fg", builtin.live_grep, {})
 vim.keymap.set("n", "<leader>fb", builtin.buffers, {})
 vim.keymap.set("n", "<leader>fh", builtin.help_tags, {})
 vim.keymap.set("n", "<leader>fw", builtin.grep_string, { desc = "Find word under cursor" })
+
+-- Search selected text in visual mode
+vim.keymap.set("v", "<leader>fw", function()
+  -- Exit visual mode and get the selected text
+  vim.cmd('normal! "vy')
+  local selected_text = vim.fn.getreg('v')
+  
+  if selected_text and selected_text ~= "" then
+    builtin.grep_string({ search = selected_text })
+  else
+    print("No text selected")
+  end
+end, { desc = "Find selected text" })
