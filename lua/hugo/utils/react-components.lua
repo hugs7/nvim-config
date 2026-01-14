@@ -125,21 +125,24 @@ local function generate_hook_content(name, extension, with_types)
 
   if with_types then
     local types_file = dir .. "/" .. full_name .. ".types.ts"
+    local pascal_name = full_name:gsub("^%l", string.upper)
+    local props_type = pascal_name .. "Props"
+    local return_type = pascal_name .. "Return"
 
     files[types_file] = {
-      "export type " .. full_name .. "Options = {",
+      "export type " .. props_type .. " = {",
       "  // Add your options here",
       "};",
       "",
-      "export type " .. full_name .. "Return = {",
+      "export type " .. return_type .. " = {",
       "  // Add your return type here",
       "};"
     }
 
     files[hook_file] = {
-      'import { ' .. full_name .. 'Options, ' .. full_name .. 'Return } from "./' .. full_name .. '.types";',
+      'import { ' .. props_type .. ', ' .. return_type .. ' } from "./' .. full_name .. '.types";',
       "",
-      "export const " .. full_name .. " = (options?: " .. full_name .. "Options): " .. full_name .. "Return => {",
+      "export const " .. full_name .. " = (options?: " .. props_type .. "): " .. return_type .. " => {",
       "  // Your hook logic here",
       "  ",
       "  return {};",
@@ -148,7 +151,7 @@ local function generate_hook_content(name, extension, with_types)
 
     files[index_file] = {
       'export { ' .. full_name .. ' } from "./' .. full_name .. '.hook";',
-      'export type { ' .. full_name .. 'Options, ' .. full_name .. 'Return } from "./' .. full_name .. '.types";'
+      'export type { ' .. props_type .. ', ' .. return_type .. ' } from "./' .. full_name .. '.types";'
     }
   else
     files[hook_file] = {
