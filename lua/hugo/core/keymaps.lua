@@ -35,7 +35,11 @@ vim.keymap.set('n', '<leader>cp', function()
   print("Copied path: " .. rel)
 end)
 
--- Braile-- Braile-- Braile
+vim.keymap.set("n", "<leader>rr", function()
+  vim.cmd("restart")
+end, { desc = "Restart Neovim and restore buffers" })
+
+-- Braile--
 local is_braille_active = false
 
 vim.keymap.set("n", "<leader>br", function()
@@ -49,3 +53,20 @@ vim.keymap.set("n", "<leader>br", function()
 
   is_braille_active = not is_braille_active
 end, { desc = "Toggle Braille overlay" })
+
+-- =========================
+-- TypeScript Keymaps
+-- =========================
+local typescript = require("hugo.langs.typescript")
+vim.keymap.set("n", "<leader>fi", typescript.fix_imports_sequential, { desc = "Fix imports (remove unused + organize)" })
+
+-- =========================
+-- React Component Creation
+-- =========================
+local react_components = require("hugo.utils.react-components")
+
+vim.keymap.set("n", "<leader>rc", react_components.create_component, { desc = "Create React component" })
+vim.keymap.set("n", "<leader>rct", react_components.create_component_with_types, { desc = "Create React component with types" })
+vim.keymap.set("n", "<leader>rh", react_components.create_hook, { desc = "Create React hook" })
+vim.keymap.set("n", "<leader>rht", react_components.create_hook_with_types, { desc = "Create React hook with types" })
+

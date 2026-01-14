@@ -29,10 +29,20 @@ local format_config = {
 -- Keymaps
 -- =========================
 
+-- Reusable format function
+local function format_buffer()
+  require("conform").format({ async = true, lsp_fallback = true })
+end
+
 -- Format
 vim.api.nvim_create_user_command("Format", function()
-  require("conform").format({ async = true, lsp_fallbask = true })
+  format_buffer()
 end, { desc = "Format current buffer" })
 
+-- Export for use in other modules
+local M = {
+  config = format_config,
+  format_buffer = format_buffer,
+}
 
-return format_config
+return M

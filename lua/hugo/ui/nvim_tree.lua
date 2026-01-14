@@ -61,13 +61,8 @@ end, { noremap = true, silent = true, desc = "Toggle file tree" })
 
 -- Focus file tree
 vim.keymap.set("n", "<leader>e", function()
-  require("nvim-tree.api").tree.focus()
-end, { noremap = true, silent = true, desc = "Focus file tree" })
-
--- Reveal current file in tree
-vim.keymap.set("n", "<leader>r", function()
   require("nvim-tree.api").tree.find_file({ open = true, focus = true })
-end, { desc = "Reveal current file in tree" })
+end, { noremap = true, silent = true, desc = "Focus file tree" })
 
 -- Clear all buffers
 vim.api.nvim_create_user_command("Bda", "bufdo bw", { bang = true })
