@@ -3,13 +3,13 @@
 -- =========================
 require('telescope').setup({
   defaults = {
-    file_ignore_patterns = { "node_modules/", ".git/", "dist/", "build/", ".next/" },
+    file_ignore_patterns = { "node_modules/", ".git/", "dist/", "build/", ".next/", ".nx", "coverage/" },
   },
   pickers = {
     find_files = {
-      hidden = true,  -- Show hidden files (files starting with .)
-      no_ignore = true,  -- Include gitignored files
-      no_ignore_parent = true,  -- Include files ignored by parent .gitignore
+      hidden = true,           -- Show hidden files (files starting with .)
+      no_ignore = true,        -- Include gitignored files
+      no_ignore_parent = true, -- Include files ignored by parent .gitignore
     },
   },
 })
@@ -29,7 +29,7 @@ vim.keymap.set("v", "<leader>fw", function()
   -- Exit visual mode and get the selected text
   vim.cmd('normal! "vy')
   local selected_text = vim.fn.getreg('v')
-  
+
   if selected_text and selected_text ~= "" then
     builtin.grep_string({ search = selected_text })
   else
