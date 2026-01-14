@@ -72,17 +72,18 @@ local function generate_component_content(name, with_types)
 
   if with_types then
     local types_file = dir .. "/" .. name .. ".types.ts"
+    local prop_type = name .. "Props"
 
     files[types_file] = {
-      "export type " .. name .. "Props = {",
+      "export type " .. prop_type .. " = {",
       "  // Add your props here",
       "};"
     }
 
     files[component_file] = {
-      'import { ' .. name .. 'Props } from "./' .. name .. '.types";',
+      'import { ' .. prop_type .. ' } from "./' .. name .. '.types";',
       "",
-      "export const " .. name .. " = ({}: " .. name .. "Props) => {",
+      "export const " .. name .. " = ({}: " .. prop_type .. ") => {",
       "  return (",
       "    <div>",
       "      " .. name,
@@ -93,7 +94,7 @@ local function generate_component_content(name, with_types)
 
     files[index_file] = {
       'export { ' .. name .. ' } from "./' .. name .. '.component";',
-      'export type { ' .. name .. 'Props } from "./' .. name .. '.types";'
+      'export type { ' .. prop_type .. ' } from "./' .. name .. '.types";'
     }
   else
     files[component_file] = {
