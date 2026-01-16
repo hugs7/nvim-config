@@ -13,9 +13,9 @@ vim.opt.rtp:prepend(lazypath)
 
 local lazy_plugins = {
   -- LSP + tooling
-  { 
-    "williamboman/mason.nvim",    
-    build = ":MasonUpdate" 
+  {
+    "williamboman/mason.nvim",
+    build = ":MasonUpdate"
   },
   "williamboman/mason-lspconfig.nvim",
   "neovim/nvim-lspconfig",
@@ -70,7 +70,7 @@ local lazy_plugins = {
     ft = { "markdown" },
     build = ":call mkdp#util#install()",
     init = function()
-      vim.g.mkdp_auto_start = 1
+      vim.g.mkdp_auto_start = 0
     end
   },
 
