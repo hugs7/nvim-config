@@ -30,6 +30,24 @@ require("nvim-tree").setup({
         vim.keymap.set("n", "V", api.node.open.vertical, opts("Open: Vertical Split"))
         vim.keymap.set("n", "S", api.node.open.horizontal, opts("Open: Horizontal Split"))
         vim.keymap.set("n", "T", api.node.open.tab, opts("Open: New Tab"))
+
+        -- Map + to change directory to the selected node
+        vim.keymap.set("n", "+", function()
+            local node = api.tree.get_node_under_cursor()
+            if node and (node.type == "directory" or node.link_to) then
+                local target = node.absolute_path
+                -- If it's a symlink, resolve to the real path
+                if node.link_to then
+                    target = vim.fn.resolve(target)
+                end
+                vim.cmd("cd " .. vim.fn.fnameescape(target))
+                -- Update nvim-tree root to match
+                api.tree.change_root(target)
+                print("Changed directory and tree root to: " .. target)
+            else
+                print("Not a directory or symlink node")
+            end
+        end, opts("Change directory and tree root to selected"))
     end,
     tab = {
         sync = {
