@@ -28,7 +28,7 @@ end
 
 -- Helper function to generate component content
 local function generate_component_content(name, with_types)
-  local target_dir = M.get_target_directory()
+  local target_dir = get_target_directory()
   local dir = target_dir .. "/" .. name
   local component_file = dir .. "/" .. name .. ".component.tsx"
   local index_file = dir .. "/index.ts"
@@ -82,7 +82,7 @@ end
 -- Helper function to generate hook content
 local function generate_hook_content(name, extension, with_types)
   local full_name = "use" .. name
-  local target_dir = M.get_target_directory()
+  local target_dir = get_target_directory()
   local dir = target_dir .. "/" .. full_name
   local hook_file = dir .. "/" .. full_name .. ".hook." .. extension
   local index_file = dir .. "/index.ts"
@@ -177,7 +177,7 @@ end
 
 -- Generate or update barrel export file (index.ts)
 function M.generate_barrel_export()
-  local target_dir = M.get_target_directory()
+  local target_dir = get_target_directory()
   local index_file = target_dir .. "/index.ts"
 
   -- Get all files in the directory
