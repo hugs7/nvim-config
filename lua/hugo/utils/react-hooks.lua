@@ -1,5 +1,6 @@
 local M = {}
 local td = require("hugo.utils.target-dir")
+local input = require("hugo.utils.input")
 local f = require("hugo.utils.file")
 
 -- Helper function to generate hook content
