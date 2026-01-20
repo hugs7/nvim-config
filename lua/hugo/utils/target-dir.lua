@@ -14,10 +14,9 @@ function M.get_nvim_tree_target_directory()
   return nil
 end
 
-
 function M.get_sibling_path_of_current_file()
-    local current_file = vim.fn.expand('%:p')
-    if current_file ~= '' and vim.fn.filereadable(current_file) == 1 then
+  local current_file = vim.fn.expand('%:p')
+  if current_file ~= '' and vim.fn.filereadable(current_file) == 1 then
     local file_dir = vim.fn.expand('%:p:h')
 
     -- Check if current directory contains component or hook files
@@ -41,14 +40,12 @@ end
 
 -- Helper function to determine target directory
 function M.get_target_directory()
-
   -- Check if we're in NvimTree
   if vim.bo.filetype == 'NvimTree' then
     return M.get_nvim_tree_target_directory()
   end
 
   return M.get_sibling_path_of_current_file()
-  
 end
 
 return M
