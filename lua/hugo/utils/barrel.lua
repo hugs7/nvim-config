@@ -1,10 +1,9 @@
 local M = {}
-local input = require('hugo.utils.input')
-
+local td = require('hugo.utils.target-dir')
 
 -- Generate or update barrel export file (index.ts)
 function M.generate_barrel_export()
-  local target_dir = input.get_target_directory()
+  local target_dir = td.get_target_directory()
   local index_file = target_dir .. "/index.ts"
 
   -- Get all files in the directory
