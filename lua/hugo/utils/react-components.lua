@@ -72,10 +72,15 @@ function M.insert_afc(with_types)
   local pascal_component_name = name:gsub("^%l", string.upper)
   local types_lines, component_lines = get_component_files(pascal_component_name, with_types)
   if types_lines then
-    for _, l in ipairs(types_lines) do
-      vim.api.nvim_put({l}, 'l', true, true)
+    local target_dir = td.get_target_directory()
+    local types_filename = target_dir .. "/" .. pascal_component_name .. ".types.ts"
+    local uv = vim.loop or vim.uv
+    local fd = uv.fs_open(types_filename, "r", 438)
+    if not fd then
+      vim.fn.writefile(types_lines, types_filename)
+    else
+      uv.fs_close(fd)
     end
-    vim.api.nvim_put({""}, 'l', true, true)
   end
   for _, l in ipairs(component_lines) do
     vim.api.nvim_put({l}, 'l', true, true)
