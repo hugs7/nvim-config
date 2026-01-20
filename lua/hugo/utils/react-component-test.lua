@@ -31,7 +31,7 @@ local function parse_imports(lines)
 end
 
 -- Helper: generate vi.mock for an import
-local ignore_patterns = { "@/common/constants", "@/constants" }
+local ignore_patterns = {"@/common/constants", "@/constants"}
 
 local function should_ignore(import_from)
   for _, pat in ipairs(ignore_patterns) do
@@ -50,13 +50,15 @@ local function generate_vi_mock(import)
   table.insert(lines, 'vi.mock("' .. import.from .. '", () => ({')
   for _, name in ipairs(import.names) do
     if is_pascal_case(name) then
-      table.insert(lines, '  ' .. name .. ': () => <div data-testid="' .. name:lower() .. '" />,')
+      table.insert(lines, '  ' .. name .. ': () => (')
+      table.insert(lines, '    <div data-testid="' .. name:lower() .. '" />')
+      table.insert(lines, '  ),')
     else
       table.insert(lines, '  ' .. name .. ': vi.fn(),')
     end
   end
-  table.insert(lines, '}))')
-  return table.concat(lines, "\n")
+  table.insert(lines, '}));')
+  return lines
 end
 
 -- Main function: generate test file for current buffer
@@ -83,9 +85,11 @@ function M.generate_react_test()
 
   -- vi.mock blocks
   for _, imp in ipairs(imports) do
-    local mock = generate_vi_mock(imp)
-    if mock then
-      table.insert(test_lines, mock)
+    local mock_lines = generate_vi_mock(imp)
+    if mock_lines then
+      for _, l in ipairs(mock_lines) do
+        table.insert(test_lines, l)
+      end
       table.insert(test_lines, "")
     end
   end
@@ -93,11 +97,13 @@ function M.generate_react_test()
   table.insert(test_lines, "describe('<" .. component_name .. " />', () => {")
   table.insert(test_lines, "  beforeEach(() => {")
   table.insert(test_lines, "    vi.clearAllMocks();")
-  table.insert(test_lines, "  })\n")
+  table.insert(test_lines, "  });")
+  table.insert(test_lines, "  ")
   table.insert(test_lines, "  it('should first', () => {")
-  table.insert(test_lines, "    // Write your test here.")
-  table.insert(test_lines, "  })")
-  table.insert(test_lines, "})")
+  table.insert(test_lines, "    render(<" .. component_name .. " />);")
+  table.insert(test_lines, "    expect(true).toBe(true);")
+  table.insert(test_lines, "  });")
+  table.insert(test_lines, "});")
 
   vim.fn.writefile(test_lines, test_file)
   vim.cmd("edit " .. test_file)
