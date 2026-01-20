@@ -66,7 +66,9 @@ vim.keymap.set("n", "<leader>fi", typescript.fix_imports_sequential, { desc = "F
 local react_components = require("hugo.utils.react-components")
 
 vim.keymap.set("n", "<leader>rc", react_components.create_component, { desc = "Create React component" })
-vim.keymap.set("n", "<leader>rct", react_components.create_component_with_types, { desc = "Create React component with types" })
+vim.keymap.set("n", "<leader>rct", react_components.create_component_with_types,
+  { desc = "Create React component with types" })
 vim.keymap.set("n", "<leader>rh", react_components.create_hook, { desc = "Create React hook" })
 vim.keymap.set("n", "<leader>rht", react_components.create_hook_with_types, { desc = "Create React hook with types" })
 
+vim.keymap.set("n", "<leader>bf", react_components.generate_barrel_export, { desc = "Generate barrel file" })
