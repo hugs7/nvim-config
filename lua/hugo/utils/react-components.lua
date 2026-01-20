@@ -1,44 +1,8 @@
 local M = {}
+local target_dir = require('hugo.utils.target-dir')
 
--- Helper function to determine target directory
-function M.get_target_directory()
-  local current_file = vim.fn.expand('%:p')
-
-  -- Check if we're in NvimTree
-  if vim.bo.filetype == 'NvimTree' then
-    local api = require('nvim-tree.api')
-    local node = api.tree.get_node_under_cursor()
-    if node then
-      if node.type == 'directory' then
-        return node.absolute_path
-      else
-        -- If it's a file, use its parent directory
-        return vim.fn.fnamemodify(node.absolute_path, ':h')
-      end
-    end
-  end
-
-  if current_file ~= '' and vim.fn.filereadable(current_file) == 1 then
-    local file_dir = vim.fn.expand('%:p:h')
-
-    -- Check if current directory contains component or hook files
-    local component_pattern = file_dir .. '/*.component.{ts,tsx}'
-    local hook_pattern = file_dir .. '/*.hook.{ts,tsx}'
-
-    local component_files = vim.fn.glob(component_pattern, 1, 1)
-    local hook_files = vim.fn.glob(hook_pattern, 1, 1)
-
-    -- If we find component/hook files in current dir, go up one level
-    if #component_files > 0 or #hook_files > 0 then
-      return vim.fn.expand('%:p:h:h') -- Go up one level
-    else
-      return vim.fn.expand('%:p:h')   -- Use current file's directory
-    end
-  else
-    -- Fall back to current working directory
-    return vim.fn.getcwd()
-  end
-end
+-- Use shared helper function to determine target directory
+local get_target_directory = target_dir.get_target_directory
 
 -- Helper function to get and validate file extension
 local function get_extension()
@@ -215,19 +179,19 @@ end
 function M.generate_barrel_export()
   local target_dir = M.get_target_directory()
   local index_file = target_dir .. "/index.ts"
-  
+
   -- Get all files in the directory
   local files = vim.fn.readdir(target_dir, function(item)
     local full_path = target_dir .. "/" .. item
     -- Include only files (not directories) and exclude index.ts
     return vim.fn.isdirectory(full_path) == 0 and item ~= "index.ts"
   end)
-  
+
   if #files == 0 then
     print("No files found in directory: " .. target_dir)
     return
   end
-  
+
   -- Generate export statements
   local exports = {}
   for _, file in ipairs(files) do
@@ -237,21 +201,21 @@ function M.generate_barrel_export()
       table.insert(exports, 'export * from "./' .. name_without_ext .. '";')
     end
   end
-  
+
   if #exports == 0 then
     print("No TypeScript/JavaScript files found in: " .. target_dir)
     return
   end
-  
+
   -- Sort exports alphabetically
   table.sort(exports)
-  
+
   -- Write to index.ts
   vim.fn.writefile(exports, index_file)
-  
+
   -- Open the file
   vim.cmd("edit " .. index_file)
-  
+
   -- Sort imports using the organize imports command
   vim.defer_fn(function()
     vim.lsp.buf.code_action({
@@ -259,7 +223,7 @@ function M.generate_barrel_export()
       apply = true,
     })
   end, 100)
-  
+
   print("Generated barrel export with " .. #exports .. " exports in: " .. vim.fn.fnamemodify(target_dir, ":~:."))
 end
 
