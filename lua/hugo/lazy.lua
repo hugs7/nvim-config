@@ -169,13 +169,6 @@ local lazy_plugins = {
 
   require("hugo.plugins.format").config,
   require("hugo.plugins.debug"),
-
-  {
-    "rcarriga/nvim-notify",
-    config = function()
-      require("notify").setup({ level = vim.log.levels.INFO })
-    end,
-  },
 }
 
 vim.list_extend(lazy_plugins, require("hugo.plugins.essentials"))
