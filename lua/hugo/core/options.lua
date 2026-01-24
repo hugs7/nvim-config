@@ -28,3 +28,29 @@ vim.api.nvim_create_autocmd("VimLeave", {
     io.flush()
   end,
 })
+
+-- =========================
+-- Grep settings
+-- =========================
+-- Use ripgrep for grep (respects .gitignore automatically)
+if vim.fn.executable("rg") == 1 then
+  vim.opt.grepprg = "rg --vimgrep --smart-case --follow --hidden --glob '!.git/' --respect-gitignore"
+  vim.opt.grepformat = "%f:%l:%c:%m"
+end
+
+-- Configure wildignore to exclude common gitignored patterns for vimgrep
+vim.opt.wildignore:append({
+  "*/node_modules/*",
+  "*/.git/*",
+  "*/dist/*",
+  "*/build/*",
+  "*/.next/*",
+  "*/.nx/*",
+  "*/coverage/*",
+  "*.log",
+  "*.tmp",
+  "*/tmp/*",
+  "*/.cache/*",
+  "*.min.js",
+  "*.min.css"
+})
