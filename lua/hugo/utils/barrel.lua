@@ -29,10 +29,10 @@ end
 local function generate_exports(target_dir)
   local exports = {}
   for _, file in ipairs(get_export_files(target_dir)) do
-    table.insert(exports, 'export * from "./' .. file .. '";')
+    table.insert(exports, 'export * from \'./' .. file .. '\';')
   end
   for _, folder in ipairs(get_export_folders(target_dir)) do
-    table.insert(exports, 'export * from "./' .. folder .. '";')
+    table.insert(exports, 'export * from \'./' .. folder .. '\';')
   end
   table.sort(exports)
   return exports
