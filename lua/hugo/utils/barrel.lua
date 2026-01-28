@@ -6,8 +6,9 @@ local function get_export_files(target_dir)
   for _, item in ipairs(vim.fn.readdir(target_dir)) do
     local full_path = target_dir .. "/" .. item
     if vim.fn.isdirectory(full_path) == 0 and item ~= "index.ts" then
-      local name_without_ext = item:match("^(.+)%.[tj]sx?$")
-      if name_without_ext then
+      local name_without_ext = item:match("^(.-)%.[tj]sx?$")
+      -- Exclude test files
+      if name_without_ext and not item:match("%.test%.[tj]sx?$") then
         table.insert(files, name_without_ext)
       end
     end
@@ -65,7 +66,7 @@ function M.generate_barrel_export()
   vim.defer_fn(function()
     vim.lsp.buf.code_action({
       context = {
-        only = { "source.organizeImports" }
+        only = {"source.organizeImports"}
       },
       apply = true
     })
