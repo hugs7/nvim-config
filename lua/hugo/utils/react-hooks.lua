@@ -59,7 +59,7 @@ function M.create_hook_with_types()
     return
   end
 
-  local extension = get_extension()
+  local extension = input.get_extension()
 
   local dir, files, main_file, full_name = generate_hook_content(name, extension, true)
   f.create_files(dir, files, main_file, "Created hook with types: " .. full_name)
