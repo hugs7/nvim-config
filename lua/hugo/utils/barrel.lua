@@ -66,7 +66,7 @@ function M.generate_barrel_export()
   vim.defer_fn(function()
     vim.lsp.buf.code_action({
       context = {
-        only = {"source.organizeImports"}
+        only = { "source.organizeImports" }
       },
       apply = true
     })
