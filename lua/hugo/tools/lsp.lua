@@ -27,8 +27,17 @@ local function on_attach(_, bufnr)
   bufmap("n", "<leader>rn", vim.lsp.buf.rename)
   bufmap("n", "<leader>ca", vim.lsp.buf.code_action)
   bufmap("n", "gr", vim.lsp.buf.references)
-  bufmap("n", "<leader>f", function() vim.lsp.buf.format { async = true } end)
 end
+
+local jstsFormatSettings = {
+  indentSize = 2,
+  tabSize = 2,
+  convertTabsToSpaces = true,
+}
+
+local jstsSettings = {
+  format = jstsFormatSettings,
+}
 
 -- Register servers using vim.lsp.config (new API)
 local servers = {
@@ -41,6 +50,10 @@ local servers = {
       -- still apply your generic on_attach keymaps
       on_attach(client, bufnr)
     end,
+    settings = {
+      typescript = jstsSettings,
+      javascript = jstsSettings,
+    },
   },
   lua_ls = {
     settings = { Lua = { diagnostics = { globals = { "vim" } } } },

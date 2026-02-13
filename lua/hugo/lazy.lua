@@ -13,7 +13,10 @@ vim.opt.rtp:prepend(lazypath)
 
 local lazy_plugins = {
   -- LSP + tooling
-  { "williamboman/mason.nvim",         build = ":MasonUpdate" },
+  {
+    "williamboman/mason.nvim",
+    build = ":MasonUpdate"
+  },
   "williamboman/mason-lspconfig.nvim",
   "neovim/nvim-lspconfig",
 
@@ -28,18 +31,29 @@ local lazy_plugins = {
   {
     "windwp/nvim-ts-autotag",
     dependencies = { "nvim-treesitter/nvim-treesitter" },
-    opts = {},
     config = function()
-      require("nvim-treesitter.configs").setup({
-        autotag = {
-          enable = true
+      require("nvim-ts-autotag").setup({
+        opts = {
+          enable_close = true,
+          enable_rename = true,
+          enable_close_on_slash = false
         }
       })
     end,
   },
 
   -- Syntax
-  { "nvim-treesitter/nvim-treesitter", build = ":TSUpdate" },
+  { 
+    "nvim-treesitter/nvim-treesitter", 
+    build = ":TSUpdate",
+    opts = {
+      ensure_installed = { "lua", "typescript", "javascript", "json", "tsx", "html", "css" },
+      highlight = {
+        enable = true, 
+        additional_vim_regex_highlighting = false
+      },
+    },
+  },
 
   -- UI
   "nvim-tree/nvim-tree.lua",
@@ -67,7 +81,7 @@ local lazy_plugins = {
     ft = { "markdown" },
     build = ":call mkdp#util#install()",
     init = function()
-      vim.g.mkdp_auto_start = 1
+      vim.g.mkdp_auto_start = 0
     end
   },
 
@@ -164,7 +178,7 @@ local lazy_plugins = {
     end,
   },
 
-  require("hugo.plugins.format"),
+  require("hugo.plugins.format").config,
   require("hugo.plugins.debug"),
 }
 
