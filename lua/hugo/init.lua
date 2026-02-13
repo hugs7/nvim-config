@@ -15,7 +15,6 @@ require("hugo.core.keymaps")
 require('hugo.ui.diagnostic')
 require('hugo.ui.lualine')
 require('hugo.ui.nvim_tree')
-require("hugo.ui.nvim_treesitter")
 require('hugo.ui.telescope')
 
 -- =========================

@@ -31,18 +31,29 @@ local lazy_plugins = {
   {
     "windwp/nvim-ts-autotag",
     dependencies = { "nvim-treesitter/nvim-treesitter" },
-    opts = {},
     config = function()
-      require("nvim-treesitter.configs").setup({
-        autotag = {
-          enable = true
+      require("nvim-ts-autotag").setup({
+        opts = {
+          enable_close = true,
+          enable_rename = true,
+          enable_close_on_slash = false
         }
       })
     end,
   },
 
   -- Syntax
-  { "nvim-treesitter/nvim-treesitter", build = ":TSUpdate" },
+  { 
+    "nvim-treesitter/nvim-treesitter", 
+    build = ":TSUpdate",
+    opts = {
+      ensure_installed = { "lua", "typescript", "javascript", "json", "tsx", "html", "css" },
+      highlight = {
+        enable = true, 
+        additional_vim_regex_highlighting = false
+      },
+    },
+  },
 
   -- UI
   "nvim-tree/nvim-tree.lua",
