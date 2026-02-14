@@ -4,24 +4,23 @@ local f = require('hugo.utils.file')
 
 local function get_component_files(component_name, with_types)
   local prop_type = component_name .. "Props"
-  local types_lines = {"export type " .. prop_type .. " = {", "  // Add your props here", "};"}
+  local types_lines = { "export type " .. prop_type .. " = {", "  // Add your props here", "};" }
   local component_lines
   local index_lines
   local export_component_def = 'export const ' .. component_name .. ' = ('
-  local component_barrel_export = 'export { ' .. component_name .. ' } from "./' .. component_name .. '.component";'
+  local component_barrel_export = 'export { ' .. component_name .. ' } from \'./' .. component_name .. '.component\';'
   local arrow_part = ") => {"
-  local return_lines = {"  return (", "    <div>", "      " .. component_name, "    </div>", "  );", "};"}
-  local component_barrel_export = 'export { ' .. component_name .. ' } from "./' .. component_name .. '.component";'
+  local return_lines = { "  return (", "    <div>", "      " .. component_name, "    </div>", "  );", "};" }
   if with_types then
     local props = "{}: " .. prop_type
-    component_lines = {'import { ' .. prop_type .. ' } from "./' .. component_name .. '.types";', "",
-                       export_component_def .. props .. arrow_part, unpack(return_lines)}
-    index_lines = {component_barrel_export,
-                   'export type { ' .. prop_type .. ' } from "./' .. component_name .. '.types";'}
+    component_lines = { 'import { ' .. prop_type .. ' } from "./' .. component_name .. '.types";', "",
+      export_component_def .. props .. arrow_part, unpack(return_lines) }
+    index_lines = { component_barrel_export,
+      'export type { ' .. prop_type .. ' } from \'./' .. component_name .. '.types\';' }
     return types_lines, component_lines, index_lines
   else
-    component_lines = {export_component_def .. arrow_part, unpack(return_lines)}
-    index_lines = {component_barrel_export}
+    component_lines = { export_component_def .. arrow_part, unpack(return_lines) }
+    index_lines = { component_barrel_export }
     return nil, component_lines, index_lines
   end
 end
@@ -83,7 +82,7 @@ function M.insert_afc(with_types)
     end
   end
   for _, l in ipairs(component_lines) do
-    vim.api.nvim_put({l}, 'l', true, true)
+    vim.api.nvim_put({ l }, 'l', true, true)
   end
 end
 
