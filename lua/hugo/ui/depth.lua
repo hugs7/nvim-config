@@ -3,7 +3,7 @@ local api = vim.api
 local fn = vim.fn
 local floor, min, max = math.floor, math.min, math.max
 
-local VISIBLE_DEPTHS = 4
+local VISIBLE_DEPTHS = 20
 local dim_cache = {}
 
 local state = {
@@ -21,16 +21,16 @@ local state = {
 
 local function setup_hl()
   api.nvim_set_hl(0, "D3dHeader", { fg = "#00e5ff", italic = true })
-  api.nvim_set_hl(0, "D3d1", { fg = "#666666" })
-  api.nvim_set_hl(0, "D3d2", { fg = "#4a4a4a" })
-  api.nvim_set_hl(0, "D3d3", { fg = "#333333" })
-  api.nvim_set_hl(0, "D3d4", { fg = "#252525" })
+  for d = 1, VISIBLE_DEPTHS do
+    local v = max(0x10, floor(0x88 - (d - 1) * (0x88 - 0x10) / (VISIBLE_DEPTHS - 1)))
+    api.nvim_set_hl(0, "D3d" .. d, { fg = ("#%02x%02x%02x"):format(v, v, v) })
+  end
   dim_cache = {}
 end
 
 local function hl_for_depth(d)
   if d <= 0 then return nil end
-  if d <= 4 then return "D3d" .. d end
+  if d <= VISIBLE_DEPTHS then return "D3d" .. d end
   return nil
 end
 
@@ -51,8 +51,7 @@ local function dim_hl(hl_name, depth)
   local g = floor(fg / 256) % 256
   local b = fg % 256
 
-  local factors = { [1] = 0.35, [2] = 0.25, [3] = 0.18, [4] = 0.12 }
-  local f = factors[depth] or 0.08
+  local f = max(0.08, 0.55 - (depth - 1) * 0.025)
 
   r, g, b = floor(r * f), floor(g * f), floor(b * f)
 
