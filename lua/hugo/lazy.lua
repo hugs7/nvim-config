@@ -237,52 +237,71 @@ local lazy_plugins = {
     "folke/noice.nvim",
     dependencies = { "MunifTanjim/nui.nvim" },
     config = function()
+      -- Jarvis HUD highlight groups for noice
+      vim.api.nvim_set_hl(0, "NoiceCmdlinePopupBorder", { fg = "#00e5ff", bg = "#0a0e14" })
+      vim.api.nvim_set_hl(0, "NoiceCmdlinePopupTitle", { fg = "#00e5ff", bg = "#0a0e14", bold = true })
+      vim.api.nvim_set_hl(0, "NoiceCmdlineIcon", { fg = "#00e5ff" })
+      vim.api.nvim_set_hl(0, "NoiceConfirm", { bg = "#0a0e14" })
+      vim.api.nvim_set_hl(0, "NoiceConfirmBorder", { fg = "#00e5ff", bg = "#0a0e14" })
+      vim.api.nvim_set_hl(0, "NoiceMini", { fg = "#00e5ff", bg = "#0a0e14" })
+
       require("noice").setup({
         presets = {
           bottom_search = true,
           command_palette = true,
           long_message_to_split = true,
-          inc_rename = true
+          inc_rename = true,
         },
         views = {
-          lsp = {
-            progress = { enabled = false },
-            hover = { enabled = true },
-            signature = { enabled = true },
-          },
-          messages = {
-            enaled = false,
-          },
-          notify = {
-            enabled = false,
-          },
-          views = {
-            -- notify = {
-            --   replace = true,
-            --   merge = false,
-            --   win_options = { winblend = 0 },
-            -- }
-          },
           cmdline_popup = {
-            border = { style = "rounded", text = { top = " COMMAND " } },
+            border = {
+              style = {
+                { "╭", "NoiceCmdlinePopupBorder" },
+                { "─", "NoiceCmdlinePopupBorder" },
+                { "╮", "NoiceCmdlinePopupBorder" },
+                { "│", "NoiceCmdlinePopupBorder" },
+                { "╯", "NoiceCmdlinePopupBorder" },
+                { "─", "NoiceCmdlinePopupBorder" },
+                { "╰", "NoiceCmdlinePopupBorder" },
+                { "│", "NoiceCmdlinePopupBorder" },
+              },
+              text = { top = " ▸ JARVIS COMMAND " },
+            },
             position = { row = 1, col = "50%" },
             size = { width = 80, height = "auto" },
             win_options = {
               wrap = true,
               linebreak = true,
-              winblend = 0
-            }
-          },
-          routes = {
-            {
-              filter = { event = "msg_show" },
-              view = "cmdline",
-
+              winblend = 10,
+              winhighlight = "Normal:NoiceConfirm,FloatBorder:NoiceCmdlinePopupBorder",
             },
-            {
-              filter = { event = "notify" },
-              opts = { skip = true },
-            }
+          },
+          mini = {
+            win_options = {
+              winblend = 15,
+              winhighlight = "Normal:NoiceMini",
+            },
+          },
+        },
+        lsp = {
+          progress = { enabled = false },
+          hover = { enabled = true },
+          signature = { enabled = true },
+        },
+        messages = {
+          enabled = false,
+        },
+        notify = {
+          enabled = false,
+        },
+        routes = {
+          {
+            filter = { event = "msg_show" },
+            view = "cmdline",
+          },
+          {
+            filter = { event = "notify" },
+            opts = { skip = true },
           },
         },
       })
