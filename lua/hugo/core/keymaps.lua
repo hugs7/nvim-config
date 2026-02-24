@@ -124,6 +124,13 @@ end, {
   desc = "Toggle Jarvis sound effects"
 })
 
+-- Matrix rain
+vim.keymap.set("n", "<leader>mx", function()
+  require("hugo.ui.matrix").toggle()
+end, {
+  desc = "Toggle Matrix rain"
+})
+
 -- Braile--
 local is_braille_active = false
 
