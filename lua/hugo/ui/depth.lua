@@ -3,13 +3,14 @@ local api = vim.api
 local fn = vim.fn
 local floor, min, max = math.floor, math.min, math.max
 
-local DEFAULT_DEPTHS = 5
+local DEFAULT_DEPTHS = 3
 local dim_cache = {}
 
 local state = {
   active = false,
   orig_buf = nil,
   orig_win = nil,
+  render_buf = nil,
   layers = {},
   focus = 0,
   filepath = nil,
@@ -138,6 +139,44 @@ local function indent_at(y, h, d)
   return floor(t * (2 + d * 1.5) + d * 3)
 end
 
+local function set_render_buf_keymaps(buf)
+  local opts = { buffer = buf, nowait = true, silent = true }
+  vim.keymap.set("n", "]", function() M.next_layer() end, opts)
+  vim.keymap.set("n", "[", function() M.prev_layer() end, opts)
+  vim.keymap.set("n", "R", function() M.toggle_rain() end, opts)
+  vim.keymap.set("n", "+", function() M.change_depths(1) end, opts)
+  vim.keymap.set("n", "-", function() M.change_depths(-1) end, opts)
+  vim.keymap.set("n", "Q", function() M.close() end, opts)
+end
+
+local function ensure_render_buf()
+  if state.render_buf and api.nvim_buf_is_valid(state.render_buf) then
+    return state.render_buf
+  end
+  local buf = api.nvim_create_buf(false, true)
+  vim.bo[buf].bufhidden = "hide"
+  vim.bo[buf].buftype = "nofile"
+  vim.bo[buf].swapfile = false
+  vim.bo[buf].filetype = state.cur_ft
+  set_render_buf_keymaps(buf)
+  state.render_buf = buf
+  return buf
+end
+
+local function cleanup_render_buf()
+  if state.render_buf and api.nvim_buf_is_valid(state.render_buf) then
+    api.nvim_buf_clear_namespace(state.render_buf, state.ns, 0, -1)
+    api.nvim_buf_delete(state.render_buf, { force = true })
+  end
+  state.render_buf = nil
+end
+
+-- Get the buffer currently being displayed (orig_buf or render_buf)
+local function display_buf()
+  if state.focus == 0 then return state.orig_buf end
+  return ensure_render_buf()
+end
+
 local function render()
   if not state.active then return end
   if not state.orig_win or not api.nvim_win_is_valid(state.orig_win) then return end
@@ -147,22 +186,43 @@ local function render()
   local height = api.nvim_win_get_height(state.orig_win)
   local ts = vim.bo[state.orig_buf].tabstop or 2
 
+  local dbuf = display_buf()
+
+  -- When viewing a historical layer, populate the render buffer
+  if state.focus > 0 then
+    local focused = state.layers[state.focus + 1]
+    if not focused then return end
+    local focused_lines = load_lines(focused, state.filepath)
+    vim.bo[dbuf].modifiable = true
+    api.nvim_buf_set_lines(dbuf, 0, -1, false, focused_lines)
+    vim.bo[dbuf].modifiable = false
+    if api.nvim_win_get_buf(state.orig_win) ~= dbuf then
+      api.nvim_win_set_buf(state.orig_win, dbuf)
+    end
+  else
+    -- Ensure we're showing the original buffer
+    if api.nvim_win_get_buf(state.orig_win) ~= state.orig_buf then
+      api.nvim_win_set_buf(state.orig_win, state.orig_buf)
+    end
+    cleanup_render_buf()
+  end
+
   -- Get visible range from the window's actual scroll position
   local win_top = api.nvim_win_call(state.orig_win, function()
     return fn.line("w0")
   end) - 1
-  local buf_line_count = api.nvim_buf_line_count(state.orig_buf)
+  local buf_line_count = api.nvim_buf_line_count(dbuf)
   local visible_end = min(win_top + height, buf_line_count)
-  local buf_lines = api.nvim_buf_get_lines(state.orig_buf, win_top, visible_end, false)
+  local buf_lines = api.nvim_buf_get_lines(dbuf, win_top, visible_end, false)
 
-  -- Expand tabs for collision detection against the focused (editable) layer
+  -- Expand tabs for collision detection against the focused layer
   local output = {}
   for i = 1, #buf_lines do
     output[i] = expand_tabs(buf_lines[i] or "", ts)
   end
 
   -- Clear previous overlay extmarks
-  api.nvim_buf_clear_namespace(state.orig_buf, state.ns, 0, -1)
+  api.nvim_buf_clear_namespace(dbuf, state.ns, 0, -1)
 
   -- Overlay back layers with dimmed syntax highlighting + optional rain
   for depth = 1, state.visible_depths do
@@ -221,7 +281,7 @@ local function render()
               local ts_line = hl_map[src_idx - 1] or {}
               local ts_hl = ts_line[i - 1]
               local hl = ts_hl and dim_hl(ts_hl, depth) or fallback
-              pcall(api.nvim_buf_set_extmark, state.orig_buf, state.ns, buf_line_idx, 0, {
+              pcall(api.nvim_buf_set_extmark, dbuf, state.ns, buf_line_idx, 0, {
                 virt_text = { { ch, hl } },
                 virt_text_win_col = win_col,
               })
@@ -241,7 +301,7 @@ local function render()
               if focused_ch == "" or focused_ch == " " then
                 local ts_hl = ts_line[i - 1]
                 local hl = ts_hl and dim_hl(ts_hl, depth) or fallback
-                pcall(api.nvim_buf_set_extmark, state.orig_buf, state.ns, buf_line_idx, 0, {
+                pcall(api.nvim_buf_set_extmark, dbuf, state.ns, buf_line_idx, 0, {
                   virt_text = { { ch, hl } },
                   virt_text_win_col = win_col,
                 })
@@ -257,7 +317,9 @@ local function render()
 end
 
 local function start_rain_timer()
-  if state.rain_timer then state.rain_timer:stop(); state.rain_timer:close() end
+  if state.rain_timer then
+    state.rain_timer:stop(); state.rain_timer:close()
+  end
   local uv = vim.uv or vim.loop
   state.rain_timer = uv.new_timer()
   state.rain_tick = 0
@@ -276,11 +338,7 @@ local function stop_rain_timer()
   end
 end
 
-function M.close()
-  if not state.active then return end
-  state.active = false
-  state.rain = false
-  stop_rain_timer()
+local function cleanup_buf()
   if state.orig_buf and api.nvim_buf_is_valid(state.orig_buf) then
     api.nvim_buf_clear_namespace(state.orig_buf, state.ns, 0, -1)
     pcall(vim.keymap.del, "n", "]", { buffer = state.orig_buf })
@@ -290,7 +348,6 @@ function M.close()
     pcall(vim.keymap.del, "n", "-", { buffer = state.orig_buf })
     pcall(vim.keymap.del, "n", "Q", { buffer = state.orig_buf })
   end
-  pcall(api.nvim_del_augroup_by_name, "depth3d")
   for _, layer in ipairs(state.layers) do
     if layer.hl_buf and api.nvim_buf_is_valid(layer.hl_buf) then
       api.nvim_buf_delete(layer.hl_buf, { force = true })
@@ -299,13 +356,28 @@ function M.close()
   end
 end
 
-function M.open()
-  if state.active then M.close() end
+function M.close()
+  if not state.active then return end
+  state.active = false
+  state.rain = false
+  stop_rain_timer()
+  -- Restore original buffer in window before cleanup
+  if state.orig_win and api.nvim_win_is_valid(state.orig_win)
+      and state.orig_buf and api.nvim_buf_is_valid(state.orig_buf) then
+    if api.nvim_win_get_buf(state.orig_win) ~= state.orig_buf then
+      api.nvim_win_set_buf(state.orig_win, state.orig_buf)
+    end
+  end
+  cleanup_render_buf()
+  cleanup_buf()
+  pcall(api.nvim_del_augroup_by_name, "depth3d")
+end
+
+local function init_buf()
+  cleanup_buf()
 
   local filepath = fn.expand("%:p")
-  if filepath == "" then vim.notify("No file open", vim.log.levels.WARN); return end
-
-  setup_hl()
+  if filepath == "" then return false end
 
   state.orig_buf = api.nvim_get_current_buf()
   state.orig_win = api.nvim_get_current_win()
@@ -314,7 +386,7 @@ function M.open()
 
   local cur_lines = api.nvim_buf_get_lines(0, 0, -1, false)
   local versions = get_all_versions(filepath)
-  if #versions == 0 then vim.notify("No git history", vim.log.levels.WARN); return end
+  if #versions == 0 then return false end
 
   state.layers = {}
   state.layers[1] = { hash = "HEAD", label = "HEAD (current)", lines = cur_lines }
@@ -324,16 +396,43 @@ function M.open()
 
   state.focus = 0
   state.rain_tick = 0
-  state.active = true
 
+  -- Buffer-local keymaps
+  local opts = { buffer = state.orig_buf, nowait = true, silent = true }
+  vim.keymap.set("n", "]", function() M.next_layer() end, opts)
+  vim.keymap.set("n", "[", function() M.prev_layer() end, opts)
+  vim.keymap.set("n", "R", function() M.toggle_rain() end, opts)
+  vim.keymap.set("n", "+", function() M.change_depths(1) end, opts)
+  vim.keymap.set("n", "-", function() M.change_depths(-1) end, opts)
+  vim.keymap.set("n", "Q", function() M.close() end, opts)
+
+  return true
+end
+
+function M.open()
+  if state.active then M.close() end
+
+  setup_hl()
+
+  if not init_buf() then
+    vim.notify("No file or no git history", vim.log.levels.WARN)
+    return
+  end
+
+  state.active = true
   render()
 
   -- Re-render on scroll and text changes
   local augroup = api.nvim_create_augroup("depth3d", { clear = true })
-  api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, {
+  api.nvim_create_autocmd({ "TextChanged", "TextChangedI", "CursorMoved" }, {
     group = augroup,
-    buffer = state.orig_buf,
-    callback = function() if state.active then render() end end,
+    callback = function()
+      if not state.active then return end
+      local buf = api.nvim_get_current_buf()
+      if buf == state.orig_buf or buf == state.render_buf then
+        render()
+      end
+    end,
   })
   api.nvim_create_autocmd("WinScrolled", {
     group = augroup,
@@ -343,20 +442,20 @@ function M.open()
       end
     end,
   })
-  api.nvim_create_autocmd("CursorMoved", {
+  api.nvim_create_autocmd("BufEnter", {
     group = augroup,
-    buffer = state.orig_buf,
-    callback = function() if state.active then render() end end,
+    callback = function()
+      if not state.active then return end
+      local buf = api.nvim_get_current_buf()
+      if buf == state.orig_buf or buf == state.render_buf then return end
+      if vim.bo[buf].buftype ~= "" then return end
+      -- Switching files: reset to editable mode
+      cleanup_render_buf()
+      state.focus = 0
+      if not init_buf() then return end
+      render()
+    end,
   })
-
-  -- Buffer-local keymaps (avoid overriding common editing keys)
-  local opts = { buffer = state.orig_buf, nowait = true, silent = true }
-  vim.keymap.set("n", "]", function() M.next_layer() end, opts)
-  vim.keymap.set("n", "[", function() M.prev_layer() end, opts)
-  vim.keymap.set("n", "R", function() M.toggle_rain() end, opts)
-  vim.keymap.set("n", "+", function() M.change_depths(1) end, opts)
-  vim.keymap.set("n", "-", function() M.change_depths(-1) end, opts)
-  vim.keymap.set("n", "Q", function() M.close() end, opts)
 end
 
 function M.next_layer()
