@@ -147,6 +147,20 @@ local lazy_plugins = {
       })
     end,
   },
+  {
+    "NStefan002/screenkey.nvim",
+    cmd = "Screenkey",
+    keys = {
+      { "<leader>sk", "<cmd>Screenkey<CR>", desc = "Toggle screenkey" },
+    },
+    config = function()
+      require("screenkey").setup({
+        win_opts = {
+          border = "rounded",
+        },
+      })
+    end,
+  },
   "nvim-tree/nvim-tree.lua",
   "nvim-lualine/lualine.nvim",
   "nvim-telescope/telescope.nvim",
