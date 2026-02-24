@@ -72,6 +72,13 @@ end, {
   desc = "Restart Neovim and restore buffers"
 })
 
+-- Radar minimap
+vim.keymap.set("n", "<leader>mr", function()
+  require("hugo.ui.radar").toggle()
+end, {
+  desc = "Toggle radar minimap"
+})
+
 -- Braile--
 local is_braille_active = false
 
