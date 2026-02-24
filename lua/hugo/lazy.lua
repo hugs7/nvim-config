@@ -46,13 +46,15 @@ local lazy_plugins = {
   { 
     "nvim-treesitter/nvim-treesitter", 
     build = ":TSUpdate",
-    opts = {
-      ensure_installed = { "lua", "typescript", "javascript", "json", "tsx", "html", "css" },
-      highlight = {
-        enable = true, 
-        additional_vim_regex_highlighting = false
-      },
-    },
+    config = function()
+      require("nvim-treesitter.configs").setup({
+        ensure_installed = { "lua", "typescript", "javascript", "json", "tsx", "html", "css" },
+        highlight = {
+          enable = true, 
+          additional_vim_regex_highlighting = false
+        },
+      })
+    end,
   },
 
   -- UI
@@ -117,6 +119,21 @@ local lazy_plugins = {
           filetypes = { "help", "dashboard", "NvimTree", "lazy" },
         },
       })
+    end,
+  },
+  {
+    "gorbit99/codewindow.nvim",
+    event = "BufReadPost",
+    config = function()
+      local codewindow = require("codewindow")
+      codewindow.setup({
+        auto_enable = true,
+        minimap_width = 10,
+        width_multiplier = 4,
+        window_border = "none",
+        exclude_filetypes = { "help", "NvimTree", "lazy", "dashboard" },
+      })
+      vim.keymap.set("n", "<leader>mm", codewindow.toggle_minimap, { desc = "Toggle minimap" })
     end,
   },
   "nvim-tree/nvim-tree.lua",
