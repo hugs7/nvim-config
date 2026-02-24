@@ -17,6 +17,8 @@ local state = {
   filepath = nil,
   cur_ft = nil,
   ns = api.nvim_create_namespace("depth3d"),
+  rain_tick = 0,
+  rain_timer = nil,
 }
 
 local function setup_hl()
@@ -175,10 +177,7 @@ local function render()
   -- Clear previous overlay extmarks
   api.nvim_buf_clear_namespace(state.render_buf, state.ns, 0, -1)
 
-  -- Overlay back layers with dimmed syntax highlighting
-  local vis_start = state.scroll_top
-  local vis_end = state.scroll_top + height - 1
-
+  -- Overlay back layers with dimmed syntax highlighting + rain effect
   for depth = 1, VISIBLE_DEPTHS do
     local layer_idx = state.focus + depth + 1
     local layer = state.layers[layer_idx]
@@ -188,28 +187,45 @@ local function render()
     if not fallback then break end
 
     local back_lines = load_lines(layer, state.filepath)
+    local total = #back_lines
+    if total == 0 then goto continue_depth end
 
-    -- Get syntax highlights from hidden treesitter buffer
+    -- Precompute expanded lines for this layer
+    if not layer.expanded then
+      layer.expanded = {}
+      for idx = 1, total do
+        layer.expanded[idx] = expand_tabs(back_lines[idx], ts)
+      end
+    end
+    local expanded = layer.expanded
+
+    -- Get syntax highlights across the full file for rain wrapping
     local hl_map = {}
-    if state.cur_ft and state.cur_ft ~= "" then
+    if depth <= 6 and state.cur_ft and state.cur_ft ~= "" then
       local hl_buf = ensure_hl_buf(layer, state.cur_ft)
-      hl_map = get_hl_map(hl_buf, vis_start, vis_end)
+      hl_map = get_hl_map(hl_buf, 0, total - 1)
     end
 
     for row = 0, height - 1 do
-      local src_idx = row + state.scroll_top + 1
-      local back_src = expand_tabs(back_lines[src_idx] or "", ts)
       local back_indent = indent_at(row, height, depth)
       local output_line = output[row + 1]
-      local ts_line = hl_map[row + state.scroll_top] or {}
+      local max_src_col = width - back_indent
+      if max_src_col <= 0 then goto continue_row end
 
-      for i = 1, #back_src do
-        local ch = back_src:sub(i, i)
-        if ch:match("%S") then
+      for i = 1, max_src_col do
+        -- Each column falls at a different speed based on column + depth
+        local col_speed = 0.4 + ((i * 7 + depth * 3) % 11) / 11 * 1.2
+        local rain_off = floor(state.rain_tick * col_speed)
+        local src_idx = ((row + state.scroll_top - rain_off) % total + total) % total + 1
+
+        local back_src = expanded[src_idx]
+        local ch = back_src and back_src:sub(i, i) or ""
+        if ch ~= "" and ch ~= " " then
           local col = back_indent + i - 1
           if col >= 0 and col < width then
             local focused_ch = output_line:sub(col + 1, col + 1)
             if focused_ch == " " then
+              local ts_line = hl_map[src_idx - 1] or {}
               local ts_hl = ts_line[i - 1]
               local hl = ts_hl and dim_hl(ts_hl, depth) or fallback
               pcall(api.nvim_buf_set_extmark, state.render_buf, state.ns, row, col, {
@@ -220,7 +236,9 @@ local function render()
           end
         end
       end
+      ::continue_row::
     end
+    ::continue_depth::
   end
 
   -- Status in buffer name (shows in bufferline)
@@ -241,6 +259,11 @@ end
 function M.close()
   if not state.active then return end
   state.active = false
+  if state.rain_timer then
+    state.rain_timer:stop()
+    state.rain_timer:close()
+    state.rain_timer = nil
+  end
   if state.orig_win and api.nvim_win_is_valid(state.orig_win) then
     if state.orig_buf and api.nvim_buf_is_valid(state.orig_buf) then
       api.nvim_win_set_buf(state.orig_win, state.orig_buf)
@@ -293,9 +316,20 @@ function M.open()
 
   state.focus = 0
   state.scroll_top = 0
+  state.rain_tick = 0
   state.active = true
 
   render()
+
+  -- Start rain timer for back-layer animation
+  if state.rain_timer then state.rain_timer:stop(); state.rain_timer:close() end
+  local uv = vim.uv or vim.loop
+  state.rain_timer = uv.new_timer()
+  state.rain_timer:start(150, 150, vim.schedule_wrap(function()
+    if not state.active then return end
+    state.rain_tick = state.rain_tick + 1
+    render()
+  end))
 
   -- Buffer-local keymaps
   local opts = { buffer = state.render_buf, nowait = true, silent = true }
