@@ -12,7 +12,7 @@ local state = {
   timer = nil,
   idle_timer = nil,
   tick = 0,
-  columns = {},   -- per-column state
+  columns = {},     -- per-column state
   idle_ms = 120000, -- 2 minutes idle before rain starts
 }
 
@@ -51,7 +51,7 @@ local function init_columns(width, height)
   state.columns = {}
   for c = 1, width do
     state.columns[c] = {
-      y = random(0, height * 2),  -- start position (can be above screen)
+      y = random(0, height * 2), -- start position (can be above screen)
       speed = random(1, 3),
       length = random(4, 12),
       chars = {},
