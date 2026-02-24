@@ -54,10 +54,15 @@ local function get_diagnostics_summary()
   local e, w, i, h = 0, 0, 0, 0
   for _, diag in ipairs(d) do
     local s = diag.severity
-    if s == 1 then e = e + 1
-    elseif s == 2 then w = w + 1
-    elseif s == 3 then i = i + 1
-    else h = h + 1 end
+    if s == 1 then
+      e = e + 1
+    elseif s == 2 then
+      w = w + 1
+    elseif s == 3 then
+      i = i + 1
+    else
+      h = h + 1
+    end
   end
   return e, w, i, h
 end
@@ -72,12 +77,7 @@ local function get_buf_count()
   return count
 end
 
-local W = 34
-
-local function pad(s)
-  if #s >= W - 4 then return "  " .. s:sub(1, W - 4) end
-  return "  " .. s .. string.rep(" ", W - 4 - #s)
-end
+local W = 26
 
 local function render()
   if not state.active or not state.buf or not api.nvim_buf_is_valid(state.buf) then return end
@@ -85,47 +85,40 @@ local function render()
   local time = os.date("%H:%M:%S")
   local date = os.date("%Y-%m-%d")
   local uptime = format_uptime()
-  local branch = get_git_branch()
+  local branch = get_git_branch():sub(1, 16)
   local lsp_name, lsp_hl = get_lsp_status()
-  local errs, warns, infos, hints = get_diagnostics_summary()
+  local errs, warns, infos, _ = get_diagnostics_summary()
   local bufs = get_buf_count()
 
   local lines = {
-    pad("╔══ JARVIS HUD ══════════╗"),
-    pad("║                        ║"),
-    pad("║  TIME    " .. time .. "        ║"),
-    pad("║  DATE    " .. date .. "   ║"),
-    pad("║  UPTIME  " .. uptime .. "        ║"),
-    pad("║                        ║"),
-    pad("║  BRANCH  " .. branch .. string.rep(" ", math.max(0, 14 - #branch)) .. "║"),
-    pad("║  BUFFERS " .. string.format("%-14s", bufs) .. "║"),
-    pad("║  LSP     " .. string.format("%-14s", lsp_name:sub(1, 14)) .. "║"),
-    pad("║                        ║"),
-    pad("║  ERR " .. string.format("%-3d", errs) .. " WRN " .. string.format("%-3d", warns) .. " INF " .. string.format("%-3d", infos) .. "  ║"),
-    pad("║                        ║"),
-    pad("╚════════════════════════╝"),
+    " ▸ JARVIS HUD",
+    "",
+    "  TIME     " .. time,
+    "  DATE     " .. date,
+    "  UPTIME   " .. uptime,
+    "",
+    "  BRANCH   " .. branch,
+    "  BUFFERS  " .. bufs,
+    "  LSP      " .. lsp_name:sub(1, 14),
+    "",
+    "  ERR " .. errs .. "  WRN " .. warns .. "  INF " .. infos,
   }
 
   vim.bo[state.buf].modifiable = true
   api.nvim_buf_set_lines(state.buf, 0, -1, false, lines)
   vim.bo[state.buf].modifiable = false
 
-  -- Apply highlights
   api.nvim_buf_clear_namespace(state.buf, ns, 0, -1)
-  for i, _ in ipairs(lines) do
-    api.nvim_buf_add_highlight(state.buf, ns, "HudBorder", i - 1, 0, -1)
-  end
-  -- Title line
+
+  -- Title
   api.nvim_buf_add_highlight(state.buf, ns, "HudTitle", 0, 0, -1)
-  -- Value highlights
-  api.nvim_buf_add_highlight(state.buf, ns, "HudValue", 2, 0, -1)
-  api.nvim_buf_add_highlight(state.buf, ns, "HudValue", 3, 0, -1)
-  api.nvim_buf_add_highlight(state.buf, ns, "HudValue", 4, 0, -1)
-  api.nvim_buf_add_highlight(state.buf, ns, "HudValue", 6, 0, -1)
-  api.nvim_buf_add_highlight(state.buf, ns, "HudValue", 7, 0, -1)
+  -- Values
+  for _, row in ipairs({ 2, 3, 4, 6, 7 }) do
+    api.nvim_buf_add_highlight(state.buf, ns, "HudValue", row, 0, -1)
+  end
   api.nvim_buf_add_highlight(state.buf, ns, lsp_hl, 8, 0, -1)
 
-  -- Diagnostics line coloring
+  -- Diagnostics coloring
   if errs > 0 then
     api.nvim_buf_add_highlight(state.buf, ns, "HudErr", 10, 0, -1)
   elseif warns > 0 then
@@ -146,19 +139,20 @@ function M.open()
   local ui = api.nvim_list_uis()[1]
   if not ui then return end
 
+  local holo = require("hugo.ui.holo_borders")
   state.win = api.nvim_open_win(state.buf, false, {
     relative = "editor",
     row = 1,
-    col = ui.width - W - 2,
+    col = ui.width - W - 4,
     width = W,
-    height = 13,
+    height = 11,
     style = "minimal",
-    border = "rounded",
+    border = holo.border(),
     focusable = false,
     zindex = 45,
   })
   vim.wo[state.win].winblend = 20
-  vim.wo[state.win].winhighlight = "Normal:HudBg,FloatBorder:HudBorder"
+  vim.wo[state.win].winhighlight = "Normal:HudBg,FloatBorder:HoloBorder1"
 
   state.active = true
   render()
