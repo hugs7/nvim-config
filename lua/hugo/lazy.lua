@@ -245,6 +245,9 @@ local lazy_plugins = {
       vim.api.nvim_set_hl(0, "NoiceConfirmBorder", { fg = "#00e5ff", bg = "#0a0e14" })
       vim.api.nvim_set_hl(0, "NoiceMini", { fg = "#00e5ff", bg = "#0a0e14" })
 
+      local holo = require("hugo.ui.holo_borders")
+      local holo_border = holo.border()
+
       require("noice").setup({
         presets = {
           bottom_search = true,
@@ -255,16 +258,7 @@ local lazy_plugins = {
         views = {
           cmdline_popup = {
             border = {
-              style = {
-                { "╭", "NoiceCmdlinePopupBorder" },
-                { "─", "NoiceCmdlinePopupBorder" },
-                { "╮", "NoiceCmdlinePopupBorder" },
-                { "│", "NoiceCmdlinePopupBorder" },
-                { "╯", "NoiceCmdlinePopupBorder" },
-                { "─", "NoiceCmdlinePopupBorder" },
-                { "╰", "NoiceCmdlinePopupBorder" },
-                { "│", "NoiceCmdlinePopupBorder" },
-              },
+              style = holo_border,
               text = { top = " ▸ JARVIS COMMAND " },
             },
             position = { row = 1, col = "50%" },
@@ -273,7 +267,20 @@ local lazy_plugins = {
               wrap = true,
               linebreak = true,
               winblend = 10,
-              winhighlight = "Normal:NoiceConfirm,FloatBorder:NoiceCmdlinePopupBorder",
+              winhighlight = holo.winhighlight(),
+            },
+          },
+          hover = {
+            border = { style = holo_border },
+            win_options = {
+              winblend = 10,
+              winhighlight = holo.winhighlight(),
+            },
+          },
+          popup = {
+            border = { style = holo_border },
+            win_options = {
+              winhighlight = holo.winhighlight(),
             },
           },
           mini = {
@@ -287,6 +294,11 @@ local lazy_plugins = {
           progress = { enabled = false },
           hover = { enabled = true },
           signature = { enabled = true },
+          override = {
+            ["vim.lsp.util.convert_input_to_markdown_lines"] = true,
+            ["vim.lsp.util.stylize_markdown"] = true,
+            ["cmp.entry.get_documentation"] = true,
+          },
         },
         messages = {
           enabled = false,

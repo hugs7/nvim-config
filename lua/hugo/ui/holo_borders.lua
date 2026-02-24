@@ -18,12 +18,11 @@ local function setup_hl()
     api.nvim_set_hl(0, "HoloBorder" .. i, { fg = color, bg = "#0a0e14" })
   end
   api.nvim_set_hl(0, "HoloFloat", { bg = "#0a0e14" })
+  api.nvim_set_hl(0, "HoloNormal", { bg = "#0a0e14", fg = "#c5c8c6" })
 end
 
--- Custom border chars with gradient highlight groups
--- The border array uses {char, highlight} pairs
--- Pattern: top-left corner is brightest, cycles through gradient
-local function make_border()
+-- The gradient border spec reusable everywhere
+function M.border()
   return {
     { "╭", "HoloBorder1" },
     { "─", "HoloBorder2" },
@@ -36,62 +35,42 @@ local function make_border()
   }
 end
 
+function M.winhighlight()
+  return "Normal:HoloNormal,FloatBorder:HoloBorder1,CursorLine:Visual"
+end
+
 -- Animated border that cycles the gradient
 local state = {
   timer = nil,
   active = false,
   offset = 0,
-  interval = 150, -- ms per frame
+  interval = 150,
 }
 
-local function make_animated_border(offset)
-  local chars = { "╭", "─", "╮", "│", "╯", "─", "╰", "│" }
-  local border = {}
-  for i, char in ipairs(chars) do
-    local idx = ((i - 1 + offset) % #gradient_colors) + 1
-    border[i] = { char, "HoloBorder" .. idx }
-  end
-  return border
-end
-
--- Override default float border styles
 function M.setup()
   setup_hl()
 
-  local border = make_border()
+  local border = M.border()
 
-  -- Override LSP hover and signature help borders
-  vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(
-    vim.lsp.handlers.hover, {
-      border = border,
-    }
-  )
-
-  vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(
-    vim.lsp.handlers.signature_help, {
-      border = border,
-    }
-  )
-
-  -- Set diagnostic float border
+  -- Diagnostic float border
   vim.diagnostic.config({
     float = {
       border = border,
     },
   })
 
-  -- Override vim.lsp.buf.hover to use our border
-  local orig_open_floating_preview = vim.lsp.util.open_floating_preview
+  -- Global float border override for anything using vim.lsp.util
+  local orig = vim.lsp.util.open_floating_preview
   vim.lsp.util.open_floating_preview = function(contents, syntax, opts, ...)
     opts = opts or {}
     if not opts.border then
       opts.border = border
     end
-    return orig_open_floating_preview(contents, syntax, opts, ...)
+    return orig(contents, syntax, opts, ...)
   end
 end
 
--- Animated glow pulse that cycles border colors on all visible float windows
+-- Animated glow pulse that cycles border colors
 function M.start_pulse()
   if state.active then return end
   setup_hl()
@@ -103,8 +82,6 @@ function M.start_pulse()
   state.timer:start(0, state.interval, vim.schedule_wrap(function()
     if not state.active then return end
     state.offset = (state.offset + 1) % #gradient_colors
-
-    -- Update highlight groups to create a cycling effect
     for i, _ in ipairs(gradient_colors) do
       local idx = ((i - 1 + state.offset) % #gradient_colors) + 1
       api.nvim_set_hl(0, "HoloBorder" .. i, { fg = gradient_colors[idx], bg = "#0a0e14" })
@@ -119,7 +96,6 @@ function M.stop_pulse()
     state.timer:close()
     state.timer = nil
   end
-  -- Reset to static gradient
   setup_hl()
 end
 
