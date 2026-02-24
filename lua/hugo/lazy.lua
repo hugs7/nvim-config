@@ -101,6 +101,24 @@ local lazy_plugins = {
       })
     end,
   },
+  {
+    "lukas-reineke/indent-blankline.nvim",
+    main = "ibl",
+    event = "BufReadPost",
+    config = function()
+      require("ibl").setup({
+        indent = { char = "│" },
+        scope = {
+          enabled = true,
+          show_start = true,
+          show_end = false,
+        },
+        exclude = {
+          filetypes = { "help", "dashboard", "NvimTree", "lazy" },
+        },
+      })
+    end,
+  },
   "nvim-tree/nvim-tree.lua",
   "nvim-lualine/lualine.nvim",
   "nvim-telescope/telescope.nvim",
