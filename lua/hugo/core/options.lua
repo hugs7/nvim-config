@@ -11,6 +11,16 @@ vim.opt.clipboard = "unnamedplus"
 
 vim.g.mapleader = " "
 
+-- Auto-reload files changed externally
+vim.opt.autoread = true
+vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter", "CursorHold" }, {
+  callback = function()
+    if vim.fn.getcmdwintype() == "" then
+      vim.cmd("checktime")
+    end
+  end,
+})
+
 -- Cursor shape per mode
 vim.opt.guicursor = {
   "n-v-c:block", -- Normal/Visual/Command → block
