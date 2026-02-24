@@ -3,10 +3,21 @@
 -- =========================
 local cmp = require("cmp")
 local luasnip = require("luasnip")
+local holo = require("hugo.ui.holo_borders")
 
 cmp.setup({
   snippet = {
     expand = function(args) luasnip.lsp_expand(args.body) end,
+  },
+  window = {
+    completion = cmp.config.window.bordered({
+      border = holo.border(),
+      winhighlight = holo.winhighlight(),
+    }),
+    documentation = cmp.config.window.bordered({
+      border = holo.border(),
+      winhighlight = holo.winhighlight(),
+    }),
   },
   mapping = cmp.mapping.preset.insert({
     ["<C-Space>"] = cmp.mapping.complete(),
