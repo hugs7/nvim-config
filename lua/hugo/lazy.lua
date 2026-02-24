@@ -56,6 +56,24 @@ local lazy_plugins = {
   },
 
   -- UI
+  {
+    "akinsho/bufferline.nvim",
+    version = "*",
+    dependencies = "nvim-tree/nvim-web-devicons",
+    config = function()
+      require("bufferline").setup({
+        options = {
+          diagnostics = "nvim_lsp",
+          offsets = {
+            { filetype = "NvimTree", text = "File Explorer", highlight = "Directory", separator = true },
+          },
+          show_buffer_close_icons = true,
+          show_close_icon = false,
+          separator_style = "slant",
+        },
+      })
+    end,
+  },
   "nvim-tree/nvim-tree.lua",
   "nvim-lualine/lualine.nvim",
   "nvim-telescope/telescope.nvim",
