@@ -51,7 +51,7 @@ local function dim_hl(hl_name, depth)
   local g = floor(fg / 256) % 256
   local b = fg % 256
 
-  local f = max(0.08, 0.55 - (depth - 1) * 0.025)
+  local f = max(0.15, 0.75 - (depth - 1) * 0.032)
 
   r, g, b = floor(r * f), floor(g * f), floor(b * f)
 
