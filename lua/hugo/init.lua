@@ -1,12 +1,16 @@
 -- =========================
+-- Core (must load before plugins)
+-- =========================
+require("hugo.core.options")
+
+-- =========================
 -- Plugin manager
 -- =========================
 require("hugo.lazy")
 
 -- =========================
--- UI
+-- Keymaps
 -- =========================
-require("hugo.core.options")
 require("hugo.core.keymaps")
 
 -- =========================

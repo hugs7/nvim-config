@@ -2,6 +2,7 @@
 -- Bootstrap lazy.nvim
 -- =========================
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
+
 if not vim.loop.fs_stat(lazypath) then
   vim.fn.system({
     "git", "clone", "--filter=blob:none",
@@ -43,14 +44,14 @@ local lazy_plugins = {
   },
 
   -- Syntax
-  { 
-    "nvim-treesitter/nvim-treesitter", 
+  {
+    "nvim-treesitter/nvim-treesitter",
     build = ":TSUpdate",
     config = function()
       require("nvim-treesitter.configs").setup({
         ensure_installed = { "lua", "typescript", "javascript", "json", "tsx", "html", "css" },
         highlight = {
-          enable = true, 
+          enable = true,
           additional_vim_regex_highlighting = false
         },
       })
@@ -153,6 +154,22 @@ local lazy_plugins = {
       },
       current_line_blame_formatter = "<author>, <author_time:%Y-%m-%d> • <summary>",
     },
+  },
+  {
+    "sindrets/diffview.nvim",
+    dependencies = { "nvim-lua/plenary.nvim" },
+    cmd = { "DiffviewOpen", "DiffviewFileHistory", "DiffviewClose" },
+    keys = {
+      { "<leader>td", "<cmd>DiffviewOpen<CR>", desc = "Git diff view" },
+      { "<leader>tf", "<cmd>DiffviewFileHistory %<CR>", desc = "File git history" },
+      { "<leader>tl", "<cmd>DiffviewFileHistory<CR>", desc = "Repo git log" },
+      { "<leader>tq", "<cmd>DiffviewClose<CR>", desc = "Close diff view" },
+    },
+    config = function()
+      require("diffview").setup({
+        enhanced_diff_hl = true,
+      })
+    end,
   },
 
   -- Markdown Preview
