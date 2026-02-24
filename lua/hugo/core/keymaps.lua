@@ -110,6 +110,13 @@ end, {
   desc = "Toggle holographic border glow"
 })
 
+-- Cursor trail
+vim.keymap.set("n", "<leader>mt", function()
+  require("hugo.ui.cursor_trail").toggle()
+end, {
+  desc = "Toggle cursor trail"
+})
+
 -- Braile--
 local is_braille_active = false
 
