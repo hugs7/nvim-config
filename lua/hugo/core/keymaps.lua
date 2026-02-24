@@ -103,6 +103,13 @@ end, {
   desc = "Toggle Jarvis HUD"
 })
 
+-- Holographic border pulse
+vim.keymap.set("n", "<leader>mg", function()
+  require("hugo.ui.holo_borders").toggle_pulse()
+end, {
+  desc = "Toggle holographic border glow"
+})
+
 -- Braile--
 local is_braille_active = false
 
