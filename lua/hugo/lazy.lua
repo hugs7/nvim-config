@@ -160,10 +160,10 @@ local lazy_plugins = {
     dependencies = { "nvim-lua/plenary.nvim" },
     cmd = { "DiffviewOpen", "DiffviewFileHistory", "DiffviewClose" },
     keys = {
-      { "<leader>td", "<cmd>DiffviewOpen<CR>", desc = "Git diff view" },
+      { "<leader>td", "<cmd>DiffviewOpen<CR>",          desc = "Git diff view" },
       { "<leader>tf", "<cmd>DiffviewFileHistory %<CR>", desc = "File git history" },
-      { "<leader>tl", "<cmd>DiffviewFileHistory<CR>", desc = "Repo git log" },
-      { "<leader>tq", "<cmd>DiffviewClose<CR>", desc = "Close diff view" },
+      { "<leader>tl", "<cmd>DiffviewFileHistory<CR>",   desc = "Repo git log" },
+      { "<leader>tq", "<cmd>DiffviewClose<CR>",         desc = "Close diff view" },
     },
     config = function()
       require("diffview").setup({
