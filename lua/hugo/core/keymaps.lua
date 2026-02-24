@@ -117,6 +117,13 @@ end, {
   desc = "Toggle cursor trail"
 })
 
+-- Sound effects
+vim.keymap.set("n", "<leader>ms", function()
+  require("hugo.ui.sounds").toggle()
+end, {
+  desc = "Toggle Jarvis sound effects"
+})
+
 -- Braile--
 local is_braille_active = false
 
