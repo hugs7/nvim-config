@@ -137,6 +137,16 @@ local lazy_plugins = {
       vim.keymap.set("n", "<leader>mm", codewindow.toggle_minimap, { desc = "Toggle minimap" })
     end,
   },
+  {
+    "RRethy/vim-illuminate",
+    event = "BufReadPost",
+    config = function()
+      require("illuminate").configure({
+        delay = 200,
+        filetypes_denylist = { "NvimTree", "lazy", "help", "dashboard" },
+      })
+    end,
+  },
   "nvim-tree/nvim-tree.lua",
   "nvim-lualine/lualine.nvim",
   "nvim-telescope/telescope.nvim",
