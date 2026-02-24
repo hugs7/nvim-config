@@ -91,7 +91,7 @@ local function render()
   local bufs = get_buf_count()
 
   local lines = {
-    " ▸ JARVIS HUD",
+    " ▸ HUD",
     "",
     "  TIME     " .. time,
     "  DATE     " .. date,
