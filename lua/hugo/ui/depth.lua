@@ -3,7 +3,7 @@ local api = vim.api
 local fn = vim.fn
 local floor, min, max = math.floor, math.min, math.max
 
-local VISIBLE_DEPTHS = 5
+local DEFAULT_DEPTHS = 5
 local dim_cache = {}
 
 local state = {
@@ -17,14 +17,17 @@ local state = {
   filepath = nil,
   cur_ft = nil,
   ns = api.nvim_create_namespace("depth3d"),
+  rain = false,
   rain_tick = 0,
   rain_timer = nil,
+  visible_depths = DEFAULT_DEPTHS,
 }
 
 local function setup_hl()
   api.nvim_set_hl(0, "D3dHeader", { fg = "#00e5ff", italic = true })
-  for d = 1, VISIBLE_DEPTHS do
-    local v = max(0x10, floor(0x88 - (d - 1) * (0x88 - 0x10) / (VISIBLE_DEPTHS - 1)))
+  local n = state.visible_depths
+  for d = 1, n do
+    local v = max(0x10, floor(0x88 - (d - 1) * (0x88 - 0x10) / max(n - 1, 1)))
     api.nvim_set_hl(0, "D3d" .. d, { fg = ("#%02x%02x%02x"):format(v, v, v) })
   end
   dim_cache = {}
@@ -32,7 +35,7 @@ end
 
 local function hl_for_depth(d)
   if d <= 0 then return nil end
-  if d <= VISIBLE_DEPTHS then return "D3d" .. d end
+  if d <= state.visible_depths then return "D3d" .. d end
   return nil
 end
 
@@ -177,8 +180,8 @@ local function render()
   -- Clear previous overlay extmarks
   api.nvim_buf_clear_namespace(state.render_buf, state.ns, 0, -1)
 
-  -- Overlay back layers with dimmed syntax highlighting + rain effect
-  for depth = 1, VISIBLE_DEPTHS do
+  -- Overlay back layers with dimmed syntax highlighting + optional rain
+  for depth = 1, state.visible_depths do
     local layer_idx = state.focus + depth + 1
     local layer = state.layers[layer_idx]
     if not layer then break end
@@ -209,27 +212,25 @@ local function render()
     for row = 0, height - 1 do
       local back_indent = indent_at(row, height, depth)
       local output_line = output[row + 1]
-      local max_src_col = width - back_indent
-      if max_src_col <= 0 then goto continue_row end
-
-      -- Original source line for this row (no rain offset)
       local orig_idx = ((row + state.scroll_top) % total) + 1
       local orig_src = expanded[orig_idx]
 
-      for i = 1, max_src_col do
-        -- Only rain where the original back layer already has content
-        local orig_ch = orig_src and orig_src:sub(i, i) or ""
-        if orig_ch == "" or orig_ch == " " then goto continue_col end
+      if state.rain then
+        local max_src_col = width - back_indent
+        if max_src_col <= 0 then goto continue_row end
 
-        -- Each column falls at a different speed based on column + depth
-        local col_speed = 0.4 + ((i * 7 + depth * 3) % 11) / 11 * 1.2
-        local rain_off = floor(state.rain_tick * col_speed)
-        local src_idx = ((row + state.scroll_top - rain_off) % total + total) % total + 1
+        for i = 1, max_src_col do
+          local orig_ch = orig_src and orig_src:sub(i, i) or ""
+          if orig_ch == "" or orig_ch == " " then goto continue_col end
 
-        local back_src = expanded[src_idx]
-        local ch = back_src and back_src:sub(i, i) or ""
-        if ch == "" or ch == " " then ch = orig_ch end
-        if true then
+          local col_speed = 0.4 + ((i * 7 + depth * 3) % 11) / 11 * 1.2
+          local rain_off = floor(state.rain_tick * col_speed)
+          local src_idx = ((row + state.scroll_top - rain_off) % total + total) % total + 1
+
+          local back_src = expanded[src_idx]
+          local ch = back_src and back_src:sub(i, i) or ""
+          if ch == "" or ch == " " then ch = orig_ch end
+
           local col = back_indent + i - 1
           if col >= 0 and col < width then
             local focused_ch = output_line:sub(col + 1, col + 1)
@@ -243,8 +244,28 @@ local function render()
               })
             end
           end
+          ::continue_col::
         end
-        ::continue_col::
+      else
+        local back_src = orig_src
+        local ts_line = hl_map[orig_idx - 1] or {}
+        for i = 1, #(back_src or "") do
+          local ch = back_src:sub(i, i)
+          if ch ~= " " and ch ~= "" then
+            local col = back_indent + i - 1
+            if col >= 0 and col < width then
+              local focused_ch = output_line:sub(col + 1, col + 1)
+              if focused_ch == " " then
+                local ts_hl = ts_line[i - 1]
+                local hl = ts_hl and dim_hl(ts_hl, depth) or fallback
+                pcall(api.nvim_buf_set_extmark, state.render_buf, state.ns, row, col, {
+                  virt_text = { { ch, hl } },
+                  virt_text_pos = "overlay",
+                })
+              end
+            end
+          end
+        end
       end
       ::continue_row::
     end
@@ -255,6 +276,26 @@ local function render()
   local label = focused.label or "?"
   pcall(api.nvim_buf_set_name, state.render_buf,
     ("[3D] Layer " .. (state.focus + 1) .. "/" .. #state.layers .. " | " .. label))
+end
+
+local function start_rain_timer()
+  if state.rain_timer then state.rain_timer:stop(); state.rain_timer:close() end
+  local uv = vim.uv or vim.loop
+  state.rain_timer = uv.new_timer()
+  state.rain_tick = 0
+  state.rain_timer:start(150, 150, vim.schedule_wrap(function()
+    if not state.active or not state.rain then return end
+    state.rain_tick = state.rain_tick + 1
+    render()
+  end))
+end
+
+local function stop_rain_timer()
+  if state.rain_timer then
+    state.rain_timer:stop()
+    state.rain_timer:close()
+    state.rain_timer = nil
+  end
 end
 
 function M.scroll(delta)
@@ -269,11 +310,8 @@ end
 function M.close()
   if not state.active then return end
   state.active = false
-  if state.rain_timer then
-    state.rain_timer:stop()
-    state.rain_timer:close()
-    state.rain_timer = nil
-  end
+  state.rain = false
+  stop_rain_timer()
   if state.orig_win and api.nvim_win_is_valid(state.orig_win) then
     if state.orig_buf and api.nvim_buf_is_valid(state.orig_buf) then
       api.nvim_win_set_buf(state.orig_win, state.orig_buf)
@@ -335,18 +373,6 @@ function M.open()
 
   render()
 
-  -- Start rain timer for back-layer animation
-  if state.rain_timer then
-    state.rain_timer:stop(); state.rain_timer:close()
-  end
-  local uv = vim.uv or vim.loop
-  state.rain_timer = uv.new_timer()
-  state.rain_timer:start(150, 150, vim.schedule_wrap(function()
-    if not state.active then return end
-    state.rain_tick = state.rain_tick + 1
-    render()
-  end))
-
   -- Buffer-local keymaps
   local opts = { buffer = state.render_buf, nowait = true, silent = true }
   vim.keymap.set("n", "j", function() M.scroll(1) end, opts)
@@ -360,11 +386,12 @@ function M.open()
       render()
     end
   end, opts)
-  vim.keymap.set("n", "gg", function()
-    state.scroll_top = 0; render()
-  end, opts)
+  vim.keymap.set("n", "gg", function() state.scroll_top = 0; render() end, opts)
   vim.keymap.set("n", "]", function() M.next_layer() end, opts)
   vim.keymap.set("n", "[", function() M.prev_layer() end, opts)
+  vim.keymap.set("n", "r", function() M.toggle_rain() end, opts)
+  vim.keymap.set("n", "+", function() M.change_depths(1) end, opts)
+  vim.keymap.set("n", "-", function() M.change_depths(-1) end, opts)
   vim.keymap.set("n", "q", function() M.close() end, opts)
 end
 
@@ -378,6 +405,28 @@ function M.prev_layer()
   if not state.active then return end
   state.focus = max(state.focus - 1, 0)
   render()
+end
+
+function M.toggle_rain()
+  if not state.active then return end
+  state.rain = not state.rain
+  if state.rain then
+    state.visible_depths = 3
+    setup_hl()
+    start_rain_timer()
+  else
+    stop_rain_timer()
+  end
+  render()
+  vim.notify("Rain " .. (state.rain and "ON" or "OFF") .. " | Depths: " .. state.visible_depths)
+end
+
+function M.change_depths(delta)
+  if not state.active then return end
+  state.visible_depths = max(1, min(state.visible_depths + delta, 20))
+  setup_hl()
+  render()
+  vim.notify("Visible depths: " .. state.visible_depths)
 end
 
 function M.toggle()
