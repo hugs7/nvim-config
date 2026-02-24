@@ -119,6 +119,16 @@ local lazy_plugins = {
       })
     end,
   },
+  {
+    "karb94/neoscroll.nvim",
+    event = "BufReadPost",
+    config = function()
+      require("neoscroll").setup({
+        easing = "quintic",
+        duration_multiplier = 0.6,
+      })
+    end,
+  },
   "nvim-tree/nvim-tree.lua",
   "nvim-lualine/lualine.nvim",
   "nvim-telescope/telescope.nvim",
