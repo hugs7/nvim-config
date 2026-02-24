@@ -1,23 +1,22 @@
 local M = {}
 local api = vim.api
-local uv = vim.uv or vim.loop
 
 -- Jarvis boot sequence lines with delays (ms)
 local boot_lines = {
   { text = "", delay = 0 },
   { text = "  ╔══════════════════════════════════════════════════╗", delay = 0, hl = "JarvisBorder" },
   { text = "  ║                                                  ║", delay = 0, hl = "JarvisBorder" },
-  { text = "  ║        ██╗ █████╗ ██████╗ ██╗   ██╗██╗███████╗   ║", delay = 60, hl = "JarvisTitle" },
-  { text = "  ║        ██║██╔══██╗██╔══██╗██║   ██║██║██╔════╝   ║", delay = 60, hl = "JarvisTitle" },
-  { text = "  ║        ██║███████║██████╔╝██║   ██║██║███████╗   ║", delay = 60, hl = "JarvisTitle" },
-  { text = "  ║   ██   ██║██╔══██║██╔══██╗╚██╗ ██╔╝██║╚════██║   ║", delay = 60, hl = "JarvisTitle" },
-  { text = "  ║   ╚█████╔╝██║  ██║██║  ██║ ╚████╔╝ ██║███████║   ║", delay = 60, hl = "JarvisTitle" },
-  { text = "  ║    ╚════╝ ╚═╝  ╚═╝╚═╝  ╚═╝  ╚═══╝  ╚═╝╚══════╝   ║", delay = 60, hl = "JarvisTitle" },
+  { text = "  ║        ██╗ █████╗ ██████╗ ██╗   ██╗██╗███████╗   ║", delay = 0, hl = "JarvisTitle" },
+  { text = "  ║        ██║██╔══██╗██╔══██╗██║   ██║██║██╔════╝   ║", delay = 0, hl = "JarvisTitle" },
+  { text = "  ║        ██║███████║██████╔╝██║   ██║██║███████╗   ║", delay = 0, hl = "JarvisTitle" },
+  { text = "  ║   ██   ██║██╔══██║██╔══██╗╚██╗ ██╔╝██║╚════██║   ║", delay = 0, hl = "JarvisTitle" },
+  { text = "  ║   ╚█████╔╝██║  ██║██║  ██║ ╚████╔╝ ██║███████║   ║", delay = 0, hl = "JarvisTitle" },
+  { text = "  ║    ╚════╝ ╚═╝  ╚═╝╚═╝  ╚═╝  ╚═══╝  ╚═╝╚══════╝   ║", delay = 0, hl = "JarvisTitle" },
   { text = "  ║                                                  ║", delay = 0, hl = "JarvisBorder" },
-  { text = "  ║     Just A Rather Very Intelligent System        ║", delay = 200, hl = "JarvisSubtitle" },
+  { text = "  ║     Just A Rather Very Intelligent System        ║", delay = 0, hl = "JarvisSubtitle" },
   { text = "  ║                                                  ║", delay = 0, hl = "JarvisBorder" },
   { text = "  ╚══════════════════════════════════════════════════╝", delay = 0, hl = "JarvisBorder" },
-  { text = "", delay = 100 },
+  { text = "", delay = 50 },
   { text = "  ▸ Initializing core systems.............. ██████████", delay = 80, hl = "JarvisProgress" },
   { text = "  ▸ Loading neural interface............... ██████████", delay = 80, hl = "JarvisProgress" },
   { text = "  ▸ Treesitter parsers..................... ██████████", delay = 80, hl = "JarvisProgress" },
@@ -26,9 +25,9 @@ local boot_lines = {
   { text = "  ▸ Git telemetry.......................... ██████████", delay = 80, hl = "JarvisProgress" },
   { text = "  ▸ HUD overlay systems................... ██████████", delay = 80, hl = "JarvisProgress" },
   { text = "  ▸ Radar sweep calibrated................. ██████████", delay = 80, hl = "JarvisProgress" },
-  { text = "", delay = 100 },
+  { text = "", delay = 50 },
   { text = "  ┌──────────────────────────────────────────────────┐", delay = 0, hl = "JarvisDim" },
-  { text = "  │  STATUS: ALL SYSTEMS OPERATIONAL                 │", delay = 200, hl = "JarvisOnline" },
+  { text = "  │  STATUS: ALL SYSTEMS OPERATIONAL                 │", delay = 100, hl = "JarvisOnline" },
   { text = "  └──────────────────────────────────────────────────┘", delay = 0, hl = "JarvisDim" },
   { text = "", delay = 0 },
   { text = "             Good evening, Hugo.", delay = 400, hl = "JarvisGreeting" },
@@ -85,7 +84,6 @@ function M.show()
   api.nvim_buf_set_lines(buf, 0, -1, false, empty)
 
   -- Animate lines appearing one by one
-  local line_idx = 0
   local total_delay = 0
 
   for i, entry in ipairs(boot_lines) do
