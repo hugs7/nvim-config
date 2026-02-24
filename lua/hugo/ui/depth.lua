@@ -10,10 +10,8 @@ local state = {
   active = false,
   orig_buf = nil,
   orig_win = nil,
-  render_buf = nil,
   layers = {},
   focus = 0,
-  scroll_top = 0,
   filepath = nil,
   cur_ft = nil,
   ns = api.nvim_create_namespace("depth3d"),
@@ -39,7 +37,6 @@ local function hl_for_depth(d)
   return nil
 end
 
--- Dim a treesitter highlight's fg color by depth factor
 local function dim_hl(hl_name, depth)
   if not hl_name then return hl_for_depth(depth) end
   local key = hl_name .. "_" .. depth
@@ -66,7 +63,6 @@ local function dim_hl(hl_name, depth)
   return name
 end
 
--- Get treesitter highlights for a line range from a buffer
 local function get_hl_map(buf, start_line, end_line)
   local map = {}
 
@@ -97,7 +93,6 @@ local function get_hl_map(buf, start_line, end_line)
   return map
 end
 
--- Create/cache a hidden buffer for treesitter parsing of a back layer
 local function ensure_hl_buf(layer, ft)
   if layer.hl_buf and api.nvim_buf_is_valid(layer.hl_buf) then
     return layer.hl_buf
@@ -133,52 +128,41 @@ local function load_lines(layer, filepath)
   return content
 end
 
--- Expand tabs to spaces
 local function expand_tabs(s, ts)
   return s:gsub("\t", string.rep(" ", ts))
 end
 
--- Perspective indent: more at top (receding), less at bottom (closer)
+-- Perspective indent for back layers: more at top (receding), less at bottom
 local function indent_at(y, h, d)
   local t = (h - 1 - y) / max(h - 1, 1)
   return floor(t * (2 + d * 1.5) + d * 3)
 end
 
 local function render()
-  if not state.active or not state.render_buf or not api.nvim_buf_is_valid(state.render_buf) then return end
+  if not state.active then return end
   if not state.orig_win or not api.nvim_win_is_valid(state.orig_win) then return end
+  if not state.orig_buf or not api.nvim_buf_is_valid(state.orig_buf) then return end
 
   local width = api.nvim_win_get_width(state.orig_win)
   local height = api.nvim_win_get_height(state.orig_win)
   local ts = vim.bo[state.orig_buf].tabstop or 2
 
-  -- Build focused layer content with perspective indent
-  local focused = state.layers[state.focus + 1]
-  if not focused then return end
-  local focused_lines = load_lines(focused, state.filepath)
+  -- Get visible range from the window's actual scroll position
+  local win_top = api.nvim_win_call(state.orig_win, function()
+    return fn.line("w0")
+  end) - 1
+  local buf_line_count = api.nvim_buf_line_count(state.orig_buf)
+  local visible_end = min(win_top + height, buf_line_count)
+  local buf_lines = api.nvim_buf_get_lines(state.orig_buf, win_top, visible_end, false)
 
+  -- Expand tabs for collision detection against the focused (editable) layer
   local output = {}
-  for row = 0, height - 1 do
-    local src_idx = row + state.scroll_top + 1
-    local src = expand_tabs(focused_lines[src_idx] or "", ts)
-    local indent = indent_at(row, height, 0)
-    local line = string.rep(" ", indent) .. src
-    -- Pad to exact width to prevent wrapping and allow overlays
-    if #line < width then
-      line = line .. string.rep(" ", width - #line)
-    elseif #line > width then
-      line = line:sub(1, width)
-    end
-    output[row + 1] = line
+  for i = 1, #buf_lines do
+    output[i] = expand_tabs(buf_lines[i] or "", ts)
   end
 
-  -- Set buffer content — treesitter highlights this via filetype
-  vim.bo[state.render_buf].modifiable = true
-  api.nvim_buf_set_lines(state.render_buf, 0, -1, false, output)
-  vim.bo[state.render_buf].modifiable = false
-
   -- Clear previous overlay extmarks
-  api.nvim_buf_clear_namespace(state.render_buf, state.ns, 0, -1)
+  api.nvim_buf_clear_namespace(state.orig_buf, state.ns, 0, -1)
 
   -- Overlay back layers with dimmed syntax highlighting + optional rain
   for depth = 1, state.visible_depths do
@@ -193,7 +177,6 @@ local function render()
     local total = #back_lines
     if total == 0 then goto continue_depth end
 
-    -- Precompute expanded lines for this layer
     if not layer.expanded then
       layer.expanded = {}
       for idx = 1, total do
@@ -202,17 +185,17 @@ local function render()
     end
     local expanded = layer.expanded
 
-    -- Get syntax highlights across the full file for rain wrapping
     local hl_map = {}
     if depth <= 6 and state.cur_ft and state.cur_ft ~= "" then
       local hl_buf = ensure_hl_buf(layer, state.cur_ft)
       hl_map = get_hl_map(hl_buf, 0, total - 1)
     end
 
-    for row = 0, height - 1 do
+    for row = 0, #buf_lines - 1 do
+      local buf_line_idx = win_top + row
       local back_indent = indent_at(row, height, depth)
-      local output_line = output[row + 1]
-      local orig_idx = ((row + state.scroll_top) % total) + 1
+      local output_line = output[row + 1] or ""
+      local orig_idx = (buf_line_idx % total) + 1
       local orig_src = expanded[orig_idx]
 
       if state.rain then
@@ -225,22 +208,22 @@ local function render()
 
           local col_speed = 0.4 + ((i * 7 + depth * 3) % 11) / 11 * 1.2
           local rain_off = floor(state.rain_tick * col_speed)
-          local src_idx = ((row + state.scroll_top - rain_off) % total + total) % total + 1
+          local src_idx = ((buf_line_idx - rain_off) % total + total) % total + 1
 
           local back_src = expanded[src_idx]
           local ch = back_src and back_src:sub(i, i) or ""
           if ch == "" or ch == " " then ch = orig_ch end
 
-          local col = back_indent + i - 1
-          if col >= 0 and col < width then
-            local focused_ch = output_line:sub(col + 1, col + 1)
-            if focused_ch == " " then
+          local win_col = back_indent + i - 1
+          if win_col >= 0 and win_col < width then
+            local focused_ch = output_line:sub(win_col + 1, win_col + 1)
+            if focused_ch == "" or focused_ch == " " then
               local ts_line = hl_map[src_idx - 1] or {}
               local ts_hl = ts_line[i - 1]
               local hl = ts_hl and dim_hl(ts_hl, depth) or fallback
-              pcall(api.nvim_buf_set_extmark, state.render_buf, state.ns, row, col, {
+              pcall(api.nvim_buf_set_extmark, state.orig_buf, state.ns, buf_line_idx, 0, {
                 virt_text = { { ch, hl } },
-                virt_text_pos = "overlay",
+                virt_text_win_col = win_col,
               })
             end
           end
@@ -252,15 +235,15 @@ local function render()
         for i = 1, #(back_src or "") do
           local ch = back_src:sub(i, i)
           if ch ~= " " and ch ~= "" then
-            local col = back_indent + i - 1
-            if col >= 0 and col < width then
-              local focused_ch = output_line:sub(col + 1, col + 1)
-              if focused_ch == " " then
+            local win_col = back_indent + i - 1
+            if win_col >= 0 and win_col < width then
+              local focused_ch = output_line:sub(win_col + 1, win_col + 1)
+              if focused_ch == "" or focused_ch == " " then
                 local ts_hl = ts_line[i - 1]
                 local hl = ts_hl and dim_hl(ts_hl, depth) or fallback
-                pcall(api.nvim_buf_set_extmark, state.render_buf, state.ns, row, col, {
+                pcall(api.nvim_buf_set_extmark, state.orig_buf, state.ns, buf_line_idx, 0, {
                   virt_text = { { ch, hl } },
-                  virt_text_pos = "overlay",
+                  virt_text_win_col = win_col,
                 })
               end
             end
@@ -271,11 +254,6 @@ local function render()
     end
     ::continue_depth::
   end
-
-  -- Status in buffer name (shows in bufferline)
-  local label = focused.label or "?"
-  pcall(api.nvim_buf_set_name, state.render_buf,
-    ("[3D] Layer " .. (state.focus + 1) .. "/" .. #state.layers .. " | " .. label))
 end
 
 local function start_rain_timer()
@@ -298,45 +276,34 @@ local function stop_rain_timer()
   end
 end
 
-function M.scroll(delta)
-  if not state.active then return end
-  local layer = state.layers[state.focus + 1]
-  if not layer or not layer.lines then return end
-  local max_scroll = max(0, #layer.lines - 10)
-  state.scroll_top = max(0, min(state.scroll_top + delta, max_scroll))
-  render()
-end
-
 function M.close()
   if not state.active then return end
   state.active = false
   state.rain = false
   stop_rain_timer()
-  if state.orig_win and api.nvim_win_is_valid(state.orig_win) then
-    if state.orig_buf and api.nvim_buf_is_valid(state.orig_buf) then
-      api.nvim_win_set_buf(state.orig_win, state.orig_buf)
-    end
+  if state.orig_buf and api.nvim_buf_is_valid(state.orig_buf) then
+    api.nvim_buf_clear_namespace(state.orig_buf, state.ns, 0, -1)
+    pcall(vim.keymap.del, "n", "]", { buffer = state.orig_buf })
+    pcall(vim.keymap.del, "n", "[", { buffer = state.orig_buf })
+    pcall(vim.keymap.del, "n", "R", { buffer = state.orig_buf })
+    pcall(vim.keymap.del, "n", "+", { buffer = state.orig_buf })
+    pcall(vim.keymap.del, "n", "-", { buffer = state.orig_buf })
+    pcall(vim.keymap.del, "n", "Q", { buffer = state.orig_buf })
   end
-  if state.render_buf and api.nvim_buf_is_valid(state.render_buf) then
-    api.nvim_buf_delete(state.render_buf, { force = true })
-  end
-  -- Clean up hidden treesitter buffers
+  pcall(api.nvim_del_augroup_by_name, "depth3d")
   for _, layer in ipairs(state.layers) do
     if layer.hl_buf and api.nvim_buf_is_valid(layer.hl_buf) then
       api.nvim_buf_delete(layer.hl_buf, { force = true })
       layer.hl_buf = nil
     end
   end
-  state.render_buf = nil
 end
 
 function M.open()
   if state.active then M.close() end
 
   local filepath = fn.expand("%:p")
-  if filepath == "" then
-    vim.notify("No file open", vim.log.levels.WARN); return
-  end
+  if filepath == "" then vim.notify("No file open", vim.log.levels.WARN); return end
 
   setup_hl()
 
@@ -347,9 +314,7 @@ function M.open()
 
   local cur_lines = api.nvim_buf_get_lines(0, 0, -1, false)
   local versions = get_all_versions(filepath)
-  if #versions == 0 then
-    vim.notify("No git history", vim.log.levels.WARN); return
-  end
+  if #versions == 0 then vim.notify("No git history", vim.log.levels.WARN); return end
 
   state.layers = {}
   state.layers[1] = { hash = "HEAD", label = "HEAD (current)", lines = cur_lines }
@@ -357,42 +322,41 @@ function M.open()
     state.layers[i + 1] = v
   end
 
-  state.render_buf = api.nvim_create_buf(false, true)
-  vim.bo[state.render_buf].bufhidden = "wipe"
-  vim.bo[state.render_buf].buftype = "nofile"
-  vim.bo[state.render_buf].swapfile = false
-  vim.bo[state.render_buf].filetype = state.cur_ft
-
-  api.nvim_win_set_buf(state.orig_win, state.render_buf)
-  vim.wo[state.orig_win].wrap = false
-
   state.focus = 0
-  state.scroll_top = 0
   state.rain_tick = 0
   state.active = true
 
   render()
 
-  -- Buffer-local keymaps
-  local opts = { buffer = state.render_buf, nowait = true, silent = true }
-  vim.keymap.set("n", "j", function() M.scroll(1) end, opts)
-  vim.keymap.set("n", "k", function() M.scroll(-1) end, opts)
-  vim.keymap.set("n", "<C-d>", function() M.scroll(floor(api.nvim_win_get_height(0) / 2)) end, opts)
-  vim.keymap.set("n", "<C-u>", function() M.scroll(-floor(api.nvim_win_get_height(0) / 2)) end, opts)
-  vim.keymap.set("n", "G", function()
-    local layer = state.layers[state.focus + 1]
-    if layer and layer.lines then
-      state.scroll_top = max(0, #layer.lines - 10)
-      render()
-    end
-  end, opts)
-  vim.keymap.set("n", "gg", function() state.scroll_top = 0; render() end, opts)
+  -- Re-render on scroll and text changes
+  local augroup = api.nvim_create_augroup("depth3d", { clear = true })
+  api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, {
+    group = augroup,
+    buffer = state.orig_buf,
+    callback = function() if state.active then render() end end,
+  })
+  api.nvim_create_autocmd("WinScrolled", {
+    group = augroup,
+    callback = function()
+      if state.active and api.nvim_get_current_win() == state.orig_win then
+        render()
+      end
+    end,
+  })
+  api.nvim_create_autocmd("CursorMoved", {
+    group = augroup,
+    buffer = state.orig_buf,
+    callback = function() if state.active then render() end end,
+  })
+
+  -- Buffer-local keymaps (avoid overriding common editing keys)
+  local opts = { buffer = state.orig_buf, nowait = true, silent = true }
   vim.keymap.set("n", "]", function() M.next_layer() end, opts)
   vim.keymap.set("n", "[", function() M.prev_layer() end, opts)
-  vim.keymap.set("n", "r", function() M.toggle_rain() end, opts)
+  vim.keymap.set("n", "R", function() M.toggle_rain() end, opts)
   vim.keymap.set("n", "+", function() M.change_depths(1) end, opts)
   vim.keymap.set("n", "-", function() M.change_depths(-1) end, opts)
-  vim.keymap.set("n", "q", function() M.close() end, opts)
+  vim.keymap.set("n", "Q", function() M.close() end, opts)
 end
 
 function M.next_layer()
