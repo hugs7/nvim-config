@@ -3,7 +3,7 @@ local api = vim.api
 local fn = vim.fn
 local floor, min, max = math.floor, math.min, math.max
 
-local VISIBLE_DEPTHS = 20
+local VISIBLE_DEPTHS = 5
 local dim_cache = {}
 
 local state = {
@@ -212,7 +212,15 @@ local function render()
       local max_src_col = width - back_indent
       if max_src_col <= 0 then goto continue_row end
 
+      -- Original source line for this row (no rain offset)
+      local orig_idx = ((row + state.scroll_top) % total) + 1
+      local orig_src = expanded[orig_idx]
+
       for i = 1, max_src_col do
+        -- Only rain where the original back layer already has content
+        local orig_ch = orig_src and orig_src:sub(i, i) or ""
+        if orig_ch == "" or orig_ch == " " then goto continue_col end
+
         -- Each column falls at a different speed based on column + depth
         local col_speed = 0.4 + ((i * 7 + depth * 3) % 11) / 11 * 1.2
         local rain_off = floor(state.rain_tick * col_speed)
@@ -220,7 +228,8 @@ local function render()
 
         local back_src = expanded[src_idx]
         local ch = back_src and back_src:sub(i, i) or ""
-        if ch ~= "" and ch ~= " " then
+        if ch == "" or ch == " " then ch = orig_ch end
+        if true then
           local col = back_indent + i - 1
           if col >= 0 and col < width then
             local focused_ch = output_line:sub(col + 1, col + 1)
@@ -235,6 +244,7 @@ local function render()
             end
           end
         end
+        ::continue_col::
       end
       ::continue_row::
     end
@@ -286,7 +296,9 @@ function M.open()
   if state.active then M.close() end
 
   local filepath = fn.expand("%:p")
-  if filepath == "" then vim.notify("No file open", vim.log.levels.WARN); return end
+  if filepath == "" then
+    vim.notify("No file open", vim.log.levels.WARN); return
+  end
 
   setup_hl()
 
@@ -297,7 +309,9 @@ function M.open()
 
   local cur_lines = api.nvim_buf_get_lines(0, 0, -1, false)
   local versions = get_all_versions(filepath)
-  if #versions == 0 then vim.notify("No git history", vim.log.levels.WARN); return end
+  if #versions == 0 then
+    vim.notify("No git history", vim.log.levels.WARN); return
+  end
 
   state.layers = {}
   state.layers[1] = { hash = "HEAD", label = "HEAD (current)", lines = cur_lines }
@@ -322,7 +336,9 @@ function M.open()
   render()
 
   -- Start rain timer for back-layer animation
-  if state.rain_timer then state.rain_timer:stop(); state.rain_timer:close() end
+  if state.rain_timer then
+    state.rain_timer:stop(); state.rain_timer:close()
+  end
   local uv = vim.uv or vim.loop
   state.rain_timer = uv.new_timer()
   state.rain_timer:start(150, 150, vim.schedule_wrap(function()
@@ -344,7 +360,9 @@ function M.open()
       render()
     end
   end, opts)
-  vim.keymap.set("n", "gg", function() state.scroll_top = 0; render() end, opts)
+  vim.keymap.set("n", "gg", function()
+    state.scroll_top = 0; render()
+  end, opts)
   vim.keymap.set("n", "]", function() M.next_layer() end, opts)
   vim.keymap.set("n", "[", function() M.prev_layer() end, opts)
   vim.keymap.set("n", "q", function() M.close() end, opts)
