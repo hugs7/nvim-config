@@ -96,6 +96,13 @@ end, {
   desc = "Toggle radar minimap"
 })
 
+-- HUD widget
+vim.keymap.set("n", "<leader>mh", function()
+  require("hugo.ui.hud").toggle()
+end, {
+  desc = "Toggle Jarvis HUD"
+})
+
 -- Braile--
 local is_braille_active = false
 
