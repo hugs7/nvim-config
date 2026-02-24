@@ -68,7 +68,7 @@ local lazy_plugins = {
         options = {
           diagnostics = "nvim_lsp",
           offsets = {
-            { filetype = "NvimTree", text = "File Explorer", highlight = "Directory", separator = true },
+            { filetype = "NvimTree", text = "NvimTree", highlight = "Directory", separator = true },
           },
           show_buffer_close_icons = true,
           show_close_icon = false,
