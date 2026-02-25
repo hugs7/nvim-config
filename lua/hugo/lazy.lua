@@ -309,6 +309,10 @@ local lazy_plugins = {
         },
         routes = {
           {
+            filter = { event = "msg_show", kind = "confirm" },
+            opts = { skip = true },
+          },
+          {
             filter = { event = "msg_show" },
             view = "cmdline",
           },
