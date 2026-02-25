@@ -23,10 +23,10 @@ vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter", "CursorHold" }, {
 
 -- Cursor shape per mode
 vim.opt.guicursor = {
-  "n-v-c:block", -- Normal/Visual/Command → block
-  "i-ci:ver25",  -- Insert/Command-insert → vertical bar (25% height)
-  "r-cr:hor20",  -- Replace modes → horizontal underline
-  "o:hor50",     -- Operator-pending → half-height underline
+  "n-v-c:block-Cursor/lCursor", -- Normal/Visual/Command → block
+  "i-ci:ver25",                 -- Insert/Command-insert → vertical bar (25% height)
+  "r-cr:hor20",                 -- Replace modes → horizontal underline
+  "o:hor50",                    -- Operator-pending → half-height underline
 }
 
 -- Reset cursor shape when leaving Neovim

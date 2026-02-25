@@ -223,6 +223,7 @@ local lazy_plugins = {
           vscDiffChanged = "#00b3ff",
         },
         group_overrides = {
+          Cursor = { fg = "#0a0e14", bg = "#00e5ff", blend = 0 },
           CursorLine = { bg = "#0f111a" },
           NormalFloat = { bg = "#0f111a" },
           FloatBorder = { fg = "#00e5ff", bg = "#0f111a" },
@@ -266,7 +267,7 @@ local lazy_plugins = {
             win_options = {
               wrap = true,
               linebreak = true,
-              winblend = 10,
+              winblend = 0,
               winhighlight = holo.winhighlight(),
             },
           },
