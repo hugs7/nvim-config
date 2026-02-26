@@ -134,7 +134,46 @@ local lazy_plugins = {
         window_border = "none",
         exclude_filetypes = { "help", "NvimTree", "lazy", "dashboard" },
       })
-      vim.keymap.set("n", "<leader>mm", codewindow.toggle_minimap, { desc = "Toggle minimap" })
+
+      local minimap_enabled = true
+      local minimap_auto_hidden = false
+      local minimap_cols = 10 + 2 -- minimap_width + cursor col + small buffer
+      local debounce_timer = vim.uv.new_timer()
+
+      local function check_minimap_overlap()
+        debounce_timer:stop()
+        debounce_timer:start(150, 0, vim.schedule_wrap(function()
+          if not minimap_enabled then return end
+          local win_width = vim.api.nvim_win_get_width(0)
+          local safe_width = win_width - minimap_cols
+          local line = vim.api.nvim_get_current_line()
+          local display_width = vim.fn.strdisplaywidth(line)
+
+          if display_width >= safe_width then
+            if not minimap_auto_hidden then
+              codewindow.close_minimap()
+              minimap_auto_hidden = true
+            end
+          else
+            if minimap_auto_hidden then
+              codewindow.open_minimap()
+              minimap_auto_hidden = false
+            end
+          end
+        end))
+      end
+
+      local group = vim.api.nvim_create_augroup("CodewindowAutoHide", { clear = true })
+      vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
+        group = group,
+        callback = check_minimap_overlap,
+      })
+
+      vim.keymap.set("n", "<leader>mm", function()
+        codewindow.toggle_minimap()
+        minimap_enabled = not minimap_enabled
+        minimap_auto_hidden = false
+      end, { desc = "Toggle minimap" })
     end,
   },
   {
