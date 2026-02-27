@@ -36,6 +36,12 @@ local function diag_color()
   return { fg = "#00ff88" }
 end
 
+vim.api.nvim_create_autocmd({ "RecordingEnter", "RecordingLeave" }, {
+  callback = function()
+    vim.schedule(function() require("lualine").refresh() end)
+  end,
+})
+
 require("lualine").setup({
   options = {
     theme = "auto",
@@ -68,11 +74,10 @@ require("lualine").setup({
       },
     },
     lualine_x = {
-      -- Show macro recording status from noice
       {
-        require("noice").api.statusline.mode.get,
-        cond = require("noice").api.statusline.mode.has,
-        color = { fg = "#ff9e64" },
+        function() return "recording @" .. vim.fn.reg_recording() end,
+        cond = function() return vim.fn.reg_recording() ~= "" end,
+        color = { fg = "#ff9e64", gui = "bold" },
       },
       {
         arc_reactor,
