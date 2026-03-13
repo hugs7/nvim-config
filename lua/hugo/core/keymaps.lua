@@ -72,6 +72,23 @@ end, {
   desc = "Restart Neovim and restore buffers"
 })
 
+-- 3D depth view (git history layers)
+vim.keymap.set("n", "<leader>3d", function()
+  require("hugo.ui.depth").toggle()
+end, {
+  desc = "Toggle 3D git depth view"
+})
+vim.keymap.set("n", "<leader>]", function()
+  require("hugo.ui.depth").next_layer()
+end, {
+  desc = "3D: focus deeper layer"
+})
+vim.keymap.set("n", "<leader>[", function()
+  require("hugo.ui.depth").prev_layer()
+end, {
+  desc = "3D: focus shallower layer"
+})
+
 -- Radar minimap
 vim.keymap.set("n", "<leader>mr", function()
   require("hugo.ui.radar").toggle()
