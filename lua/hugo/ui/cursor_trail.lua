@@ -9,6 +9,8 @@ local state = {
   trail = {}, -- list of { buf, row, col, tick }
   max_trail = 8,
   fade_ms = 40, -- ms between fade steps
+  throttle_timer = nil,
+  pending = false,
 }
 
 -- Trail colors from bright to dim
@@ -122,15 +124,30 @@ function M.open()
   local pos = api.nvim_win_get_cursor(0)
   last_pos = { pos[1] - 1, pos[2] }
 
+  state.throttle_timer = vim.uv.new_timer()
+
   state.aug = api.nvim_create_augroup("CursorTrail", { clear = true })
   api.nvim_create_autocmd("CursorMoved", {
     group = state.aug,
-    callback = on_cursor_move,
+    callback = function()
+      if state.pending then return end
+      state.pending = true
+      state.throttle_timer:start(16, 0, vim.schedule_wrap(function()
+        state.pending = false
+        on_cursor_move()
+      end))
+    end,
   })
 end
 
 function M.close()
   state.active = false
+  if state.throttle_timer then
+    state.throttle_timer:stop()
+    state.throttle_timer:close()
+    state.throttle_timer = nil
+  end
+  state.pending = false
   if state.aug then
     pcall(api.nvim_del_augroup_by_id, state.aug)
     state.aug = nil

@@ -138,35 +138,46 @@ local lazy_plugins = {
       local minimap_enabled = true
       local minimap_auto_hidden = false
       local minimap_cols = 10 + 2 -- minimap_width + cursor col + small buffer
-      local debounce_timer = vim.uv.new_timer()
+      local debounce_timer = nil
+      local debounce_pending = false
 
       local function check_minimap_overlap()
-        debounce_timer:stop()
-        debounce_timer:start(150, 0, vim.schedule_wrap(function()
-          if not minimap_enabled then return end
-          local win_width = vim.api.nvim_win_get_width(0)
-          local safe_width = win_width - minimap_cols
-          local line = vim.api.nvim_get_current_line()
-          local display_width = vim.fn.strdisplaywidth(line)
+        debounce_pending = false
+        if not minimap_enabled then return end
+        local ok, win_width = pcall(vim.api.nvim_win_get_width, 0)
+        if not ok then return end
+        local safe_width = win_width - minimap_cols
+        local line = vim.api.nvim_get_current_line()
+        local display_width = vim.fn.strdisplaywidth(line)
 
-          if display_width >= safe_width then
-            if not minimap_auto_hidden then
-              codewindow.close_minimap()
-              minimap_auto_hidden = true
-            end
-          else
-            if minimap_auto_hidden then
-              codewindow.open_minimap()
-              minimap_auto_hidden = false
-            end
+        if display_width >= safe_width then
+          if not minimap_auto_hidden then
+            codewindow.close_minimap()
+            minimap_auto_hidden = true
           end
-        end))
+        else
+          if minimap_auto_hidden then
+            codewindow.open_minimap()
+            minimap_auto_hidden = false
+          end
+        end
+      end
+
+      local function schedule_overlap_check()
+        if debounce_pending then return end
+        debounce_pending = true
+        if debounce_timer then
+          debounce_timer:stop()
+        else
+          debounce_timer = vim.uv.new_timer()
+        end
+        debounce_timer:start(150, 0, vim.schedule_wrap(check_minimap_overlap))
       end
 
       local group = vim.api.nvim_create_augroup("CodewindowAutoHide", { clear = true })
       vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
         group = group,
-        callback = check_minimap_overlap,
+        callback = schedule_overlap_check,
       })
 
       vim.keymap.set("n", "<leader>mm", function()

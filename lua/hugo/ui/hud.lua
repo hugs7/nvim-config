@@ -9,6 +9,8 @@ local state = {
   timer = nil,
   active = false,
   start_time = uv.hrtime(),
+  cached_branch = nil,
+  branch_tick = 0,
 }
 
 local ns = api.nvim_create_namespace("jarvis_hud")
@@ -33,10 +35,21 @@ local function format_uptime()
   return string.format("%02d:%02d:%02d", h, m, s)
 end
 
+local BRANCH_CACHE_SECS = 30
+
 local function get_git_branch()
+  local now = os.time()
+  if state.cached_branch and (now - state.branch_tick) < BRANCH_CACHE_SECS then
+    return state.cached_branch
+  end
   local branch = vim.fn.systemlist("git branch --show-current 2>/dev/null")
-  if vim.v.shell_error ~= 0 or #branch == 0 then return "N/A" end
-  return branch[1]
+  if vim.v.shell_error ~= 0 or #branch == 0 then
+    state.cached_branch = "N/A"
+  else
+    state.cached_branch = branch[1]
+  end
+  state.branch_tick = now
+  return state.cached_branch
 end
 
 local function get_lsp_status()
