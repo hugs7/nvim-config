@@ -2,6 +2,7 @@
 -- Bootstrap lazy.nvim
 -- =========================
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
+
 if not vim.loop.fs_stat(lazypath) then
   vim.fn.system({
     "git", "clone", "--filter=blob:none",
@@ -43,19 +44,123 @@ local lazy_plugins = {
   },
 
   -- Syntax
-  { 
-    "nvim-treesitter/nvim-treesitter", 
+  {
+    "nvim-treesitter/nvim-treesitter",
     build = ":TSUpdate",
-    opts = {
-      ensure_installed = { "lua", "typescript", "javascript", "json", "tsx", "html", "css" },
-      highlight = {
-        enable = true, 
-        additional_vim_regex_highlighting = false
-      },
-    },
+    config = function()
+      require("nvim-treesitter.configs").setup({
+        ensure_installed = { "lua", "typescript", "javascript", "json", "tsx", "html", "css" },
+        highlight = {
+          enable = true,
+          additional_vim_regex_highlighting = false
+        },
+      })
+    end,
   },
 
   -- UI
+  {
+    "akinsho/bufferline.nvim",
+    version = "*",
+    dependencies = "nvim-tree/nvim-web-devicons",
+    config = function()
+      require("bufferline").setup({
+        options = {
+          diagnostics = "nvim_lsp",
+          offsets = {
+            { filetype = "NvimTree", text = "NvimTree", highlight = "Directory", separator = true },
+          },
+          show_buffer_close_icons = true,
+          show_close_icon = false,
+          separator_style = "slant",
+        },
+      })
+    end,
+  },
+  {
+    "Bekaboo/dropbar.nvim",
+    dependencies = { "nvim-tree/nvim-web-devicons" },
+    config = function()
+      require("dropbar").setup({
+        bar = {
+          sources = function(buf, _)
+            local sources = require("dropbar.sources")
+            local utils = require("dropbar.utils")
+            if vim.bo[buf].ft == "markdown" then
+              return { sources.markdown }
+            end
+            if vim.bo[buf].buftype == "terminal" then
+              return { sources.terminal }
+            end
+            return {
+              sources.path,
+              utils.source.fallback({
+                sources.lsp,
+                sources.treesitter,
+              }),
+            }
+          end,
+        },
+      })
+    end,
+  },
+  {
+    "lukas-reineke/indent-blankline.nvim",
+    main = "ibl",
+    event = "BufReadPost",
+    config = function()
+      require("ibl").setup({
+        indent = { char = "│" },
+        scope = {
+          enabled = true,
+          show_start = true,
+          show_end = false,
+        },
+        exclude = {
+          filetypes = { "help", "dashboard", "NvimTree", "lazy" },
+        },
+      })
+    end,
+  },
+  {
+    "gorbit99/codewindow.nvim",
+    event = "BufReadPost",
+    config = function()
+      local codewindow = require("codewindow")
+      codewindow.setup({
+        auto_enable = true,
+        minimap_width = 10,
+        width_multiplier = 4,
+        window_border = "none",
+        exclude_filetypes = { "help", "NvimTree", "lazy", "dashboard" },
+      })
+      vim.keymap.set("n", "<leader>mm", codewindow.toggle_minimap, { desc = "Toggle minimap" })
+    end,
+  },
+  {
+    "RRethy/vim-illuminate",
+    event = "BufReadPost",
+    config = function()
+      require("illuminate").configure({
+        delay = 200,
+        filetypes_denylist = { "NvimTree", "lazy", "help", "dashboard" },
+      })
+    end,
+  },
+  {
+    "NStefan002/screenkey.nvim",
+    cmd = "Screenkey",
+    keys = {
+      { "<leader>sk", "<cmd>Screenkey<CR>", desc = "Toggle screenkey" },
+    },
+    config = function()
+      require("screenkey").setup({
+        win_opts = {
+          border = "rounded",
+        },
+      })
+    end,
+  },
   "nvim-tree/nvim-tree.lua",
   "nvim-lualine/lualine.nvim",
   "nvim-telescope/telescope.nvim",
@@ -73,6 +178,22 @@ local lazy_plugins = {
       },
       current_line_blame_formatter = "<author>, <author_time:%Y-%m-%d> • <summary>",
     },
+  },
+  {
+    "sindrets/diffview.nvim",
+    dependencies = { "nvim-lua/plenary.nvim" },
+    cmd = { "DiffviewOpen", "DiffviewFileHistory", "DiffviewClose" },
+    keys = {
+      { "<leader>td", "<cmd>DiffviewOpen<CR>",          desc = "Git diff view" },
+      { "<leader>tf", "<cmd>DiffviewFileHistory %<CR>", desc = "File git history" },
+      { "<leader>tl", "<cmd>DiffviewFileHistory<CR>",   desc = "Repo git log" },
+      { "<leader>tq", "<cmd>DiffviewClose<CR>",         desc = "Close diff view" },
+    },
+    config = function()
+      require("diffview").setup({
+        enhanced_diff_hl = true,
+      })
+    end,
   },
 
   -- Markdown Preview

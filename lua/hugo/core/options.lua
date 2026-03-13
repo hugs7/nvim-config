@@ -10,7 +10,16 @@ vim.opt.termguicolors = true
 vim.opt.clipboard = "unnamedplus"
 
 vim.g.mapleader = " "
-vim.o.winbar = "%f"
+
+-- Auto-reload files changed externally
+vim.opt.autoread = true
+vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter", "CursorHold" }, {
+  callback = function()
+    if vim.fn.getcmdwintype() == "" then
+      vim.cmd("checktime")
+    end
+  end,
+})
 
 -- Cursor shape per mode
 vim.opt.guicursor = {

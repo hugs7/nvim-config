@@ -42,6 +42,22 @@ vim.keymap.set("n", "<leader>-", "<cmd>vertical resize -5<CR>", {
   desc = "Decrease NvimTree width"
 })
 
+-- Adjust pane height
+vim.keymap.set("n", "<leader>+", "<cmd>resize +5<CR>", {
+  desc = "Increase pane height"
+})
+vim.keymap.set("n", "<leader>_", "<cmd>resize -5<CR>", {
+  desc = "Decrease pane height"
+})
+
+-- =========================
+-- Tab (Buffer) Navigation
+-- =========================
+vim.keymap.set("n", "<Tab>", "<cmd>BufferLineCycleNext<CR>", { desc = "Next tab" })
+vim.keymap.set("n", "<S-Tab>", "<cmd>BufferLineCyclePrev<CR>", { desc = "Previous tab" })
+vim.keymap.set("n", "<leader>x", "<cmd>bdelete<CR>", { desc = "Close tab" })
+vim.keymap.set("n", "<leader>bp", "<cmd>BufferLineTogglePin<CR>", { desc = "Pin tab" })
+
 -- Copy open file path
 vim.keymap.set('n', '<leader>cp', function()
   local abs = vim.fn.expand('%:p')
@@ -54,6 +70,13 @@ vim.keymap.set("n", "<leader>rr", function()
   vim.cmd("restart")
 end, {
   desc = "Restart Neovim and restore buffers"
+})
+
+-- Radar minimap
+vim.keymap.set("n", "<leader>mr", function()
+  require("hugo.ui.radar").toggle()
+end, {
+  desc = "Toggle radar minimap"
 })
 
 -- Braile--
