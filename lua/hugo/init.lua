@@ -16,6 +16,8 @@ require("hugo.core.keymaps")
 -- =========================
 -- UI
 -- =========================
+require('hugo.ui.boot').setup()
+require('hugo.ui.holo_borders').setup()
 require('hugo.ui.diagnostic')
 require('hugo.ui.lualine')
 require('hugo.ui.nvim_tree')

@@ -55,7 +55,14 @@ vim.keymap.set("n", "<leader>_", "<cmd>resize -5<CR>", {
 -- =========================
 vim.keymap.set("n", "<Tab>", "<cmd>BufferLineCycleNext<CR>", { desc = "Next tab" })
 vim.keymap.set("n", "<S-Tab>", "<cmd>BufferLineCyclePrev<CR>", { desc = "Previous tab" })
-vim.keymap.set("n", "<leader>x", "<cmd>bdelete<CR>", { desc = "Close tab" })
+vim.keymap.set("n", "<leader>x", function()
+  local buf = vim.api.nvim_get_current_buf()
+  vim.cmd("BufferLineCycleNext")
+  if vim.api.nvim_get_current_buf() == buf then
+    vim.cmd("BufferLineCyclePrev")
+  end
+  vim.cmd("bdelete " .. buf)
+end, { desc = "Close tab" })
 vim.keymap.set("n", "<leader>bp", "<cmd>BufferLineTogglePin<CR>", { desc = "Pin tab" })
 
 -- Copy open file path
@@ -94,6 +101,41 @@ vim.keymap.set("n", "<leader>mr", function()
   require("hugo.ui.radar").toggle()
 end, {
   desc = "Toggle radar minimap"
+})
+
+-- HUD widget
+vim.keymap.set("n", "<leader>mh", function()
+  require("hugo.ui.hud").toggle()
+end, {
+  desc = "Toggle Jarvis HUD"
+})
+
+-- Holographic border pulse
+vim.keymap.set("n", "<leader>mg", function()
+  require("hugo.ui.holo_borders").toggle_pulse()
+end, {
+  desc = "Toggle holographic border glow"
+})
+
+-- Cursor trail
+vim.keymap.set("n", "<leader>mt", function()
+  require("hugo.ui.cursor_trail").toggle()
+end, {
+  desc = "Toggle cursor trail"
+})
+
+-- Sound effects
+vim.keymap.set("n", "<leader>ms", function()
+  require("hugo.ui.sounds").toggle()
+end, {
+  desc = "Toggle Jarvis sound effects"
+})
+
+-- Matrix rain
+vim.keymap.set("n", "<leader>mx", function()
+  require("hugo.ui.matrix").toggle()
+end, {
+  desc = "Toggle Matrix rain"
 })
 
 -- Braile--

@@ -1,10 +1,62 @@
+-- Arc reactor animation frames
+local arc_frames = { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" }
+local arc_idx = 1
+local arc_timer = (vim.uv or vim.loop).new_timer()
+arc_timer:start(100, 100, vim.schedule_wrap(function()
+  arc_idx = (arc_idx % #arc_frames) + 1
+end))
+
+-- Cache LSP + diagnostic results, refresh only on relevant events
+local cached_lsp_name = "STANDBY"
+local cached_diag_e = 0
+local cached_diag_w = 0
+
+local function refresh_statusline_cache()
+  local clients = vim.lsp.get_clients({ bufnr = 0 })
+  cached_lsp_name = #clients > 0 and clients[1].name or "STANDBY"
+  cached_diag_e = #vim.diagnostic.get(nil, { severity = 1 })
+  cached_diag_w = #vim.diagnostic.get(nil, { severity = 2 })
+end
+
+vim.api.nvim_create_autocmd({ "DiagnosticChanged", "LspAttach", "LspDetach", "BufEnter" }, {
+  callback = function()
+    vim.schedule(refresh_statusline_cache)
+  end,
+})
+
+local function arc_reactor()
+  local icon = arc_frames[arc_idx]
+  return icon .. " " .. cached_lsp_name
+end
+
+local function diag_summary()
+  if cached_diag_e > 0 then
+    return "▲ " .. cached_diag_e .. "E " .. cached_diag_w .. "W"
+  elseif cached_diag_w > 0 then
+    return "● " .. cached_diag_w .. "W"
+  end
+  return "◆ CLEAR"
+end
+
+local function diag_color()
+  if cached_diag_e > 0 then return { fg = "#ff4444", gui = "bold" } end
+  if cached_diag_w > 0 then return { fg = "#ff9e64" } end
+  return { fg = "#00ff88" }
+end
+
+vim.api.nvim_create_autocmd({ "RecordingEnter", "RecordingLeave" }, {
+  callback = function()
+    vim.schedule(function() require("lualine").refresh() end)
+  end,
+})
+
 require("lualine").setup({
   options = {
-    theme = "auto", -- we'll override colors manually
+    theme = "auto",
     globalstatus = true,
     icons_enabled = true,
-    component_separators = { left = "", right = "" },
-    section_separators = { left = "", right = "" },
+    component_separators = { left = "", right = "" },
+    section_separators = { left = "", right = "" },
     disabled_filetypes = { "NvimTree", "dashboard" },
   },
   sections = {
@@ -12,11 +64,15 @@ require("lualine").setup({
       {
         "mode",
         color = { fg = "#0f111a", bg = "#00e5ff", gui = "bold" },
-        separator = { left = "", right = "" },
+        separator = { left = "", right = "" },
       },
     },
     lualine_b = {
-      { "branch", icon = "", color = { fg = "#00e5ff" } },
+      { "branch", icon = "", color = { fg = "#00e5ff" } },
+      {
+        diag_summary,
+        color = diag_color,
+      },
     },
     lualine_c = {
       {
@@ -26,11 +82,14 @@ require("lualine").setup({
       },
     },
     lualine_x = {
-      -- Show macro recording status from noice
       {
-        require("noice").api.statusline.mode.get,
-        cond = require("noice").api.statusline.mode.has,
-        color = { fg = "#ff9e64" },
+        function() return "recording @" .. vim.fn.reg_recording() end,
+        cond = function() return vim.fn.reg_recording() ~= "" end,
+        color = { fg = "#ff9e64", gui = "bold" },
+      },
+      {
+        arc_reactor,
+        color = { fg = "#00e5ff" },
       },
       { "encoding",   color = { fg = "#5c6370" } },
       { "fileformat", color = { fg = "#5c6370" } },
@@ -40,7 +99,7 @@ require("lualine").setup({
       {
         "progress",
         color = { fg = "#0f111a", bg = "#00e5ff", gui = "bold" },
-        separator = { left = "", right = "" },
+        separator = { left = "", right = "" },
       },
     },
     lualine_z = {

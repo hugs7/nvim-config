@@ -19,7 +19,7 @@ local format_config = {
     formatters = {
       prettier = {
         command = "prettier",
-        args = { "--stdin-filepath", "$FILENAME", "--single-quote" },
+        args = { "--stdin-filepath", "$FILENAME" },
       },
     },
   },

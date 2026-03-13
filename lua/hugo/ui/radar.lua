@@ -10,7 +10,7 @@ local CX = floor(W / 2)
 local R = CY - 1
 
 local ns = api.nvim_create_namespace("radar")
-local state = { buf = nil, win = nil, timer = nil, sweep = 0, active = false, aug = nil }
+local state = { buf = nil, win = nil, timer = nil, sweep = 0, active = false, aug = nil, cached_lines = nil, cached_total = 0, cache_buf = nil, dirty = true }
 
 local function set_hl()
   local hl = api.nvim_set_hl
@@ -44,8 +44,14 @@ local function render()
   if not sw then return end
 
   local sb = api.nvim_win_get_buf(sw)
-  local lines = api.nvim_buf_get_lines(sb, 0, -1, false)
-  local total = max(#lines, 1)
+  if state.dirty or state.cache_buf ~= sb then
+    state.cached_lines = api.nvim_buf_get_lines(sb, 0, -1, false)
+    state.cached_total = max(#state.cached_lines, 1)
+    state.cache_buf = sb
+    state.dirty = false
+  end
+  local lines = state.cached_lines
+  local total = state.cached_total
   local cur = api.nvim_win_get_cursor(sw)[1]
 
   local out, hls = {}, {}
@@ -155,16 +161,24 @@ function M.open()
   render()
 
   state.timer = vim.loop.new_timer()
-  state.timer:start(0, 80, vim.schedule_wrap(function()
-    state.sweep = state.sweep + 0.1
+  state.timer:start(0, 200, vim.schedule_wrap(function()
+    state.sweep = state.sweep + 0.25
     if state.sweep > pi then state.sweep = state.sweep - 2 * pi end
     render()
   end))
 
   state.aug = api.nvim_create_augroup("Radar", { clear = true })
-  api.nvim_create_autocmd({ "CursorMoved", "TextChanged" }, {
+  api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, {
     group = state.aug,
-    callback = function() if state.active then render() end end,
+    callback = function()
+      if state.active then state.dirty = true end
+    end,
+  })
+  api.nvim_create_autocmd("CursorMoved", {
+    group = state.aug,
+    callback = function()
+      -- cursor position updates on next timer tick, no extra render needed
+    end,
   })
 end
 

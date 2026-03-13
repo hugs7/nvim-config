@@ -134,7 +134,57 @@ local lazy_plugins = {
         window_border = "none",
         exclude_filetypes = { "help", "NvimTree", "lazy", "dashboard" },
       })
-      vim.keymap.set("n", "<leader>mm", codewindow.toggle_minimap, { desc = "Toggle minimap" })
+
+      local minimap_enabled = true
+      local minimap_auto_hidden = false
+      local minimap_cols = 10 + 2 -- minimap_width + cursor col + small buffer
+      local debounce_timer = nil
+      local debounce_pending = false
+
+      local function check_minimap_overlap()
+        debounce_pending = false
+        if not minimap_enabled then return end
+        local ok, win_width = pcall(vim.api.nvim_win_get_width, 0)
+        if not ok then return end
+        local safe_width = win_width - minimap_cols
+        local line = vim.api.nvim_get_current_line()
+        local display_width = vim.fn.strdisplaywidth(line)
+
+        if display_width >= safe_width then
+          if not minimap_auto_hidden then
+            codewindow.close_minimap()
+            minimap_auto_hidden = true
+          end
+        else
+          if minimap_auto_hidden then
+            codewindow.open_minimap()
+            minimap_auto_hidden = false
+          end
+        end
+      end
+
+      local function schedule_overlap_check()
+        if debounce_pending then return end
+        debounce_pending = true
+        if debounce_timer then
+          debounce_timer:stop()
+        else
+          debounce_timer = vim.uv.new_timer()
+        end
+        debounce_timer:start(150, 0, vim.schedule_wrap(check_minimap_overlap))
+      end
+
+      local group = vim.api.nvim_create_augroup("CodewindowAutoHide", { clear = true })
+      vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
+        group = group,
+        callback = schedule_overlap_check,
+      })
+
+      vim.keymap.set("n", "<leader>mm", function()
+        codewindow.toggle_minimap()
+        minimap_enabled = not minimap_enabled
+        minimap_auto_hidden = false
+      end, { desc = "Toggle minimap" })
     end,
   },
   {
@@ -223,6 +273,7 @@ local lazy_plugins = {
           vscDiffChanged = "#00b3ff",
         },
         group_overrides = {
+          Cursor = { fg = "#0a0e14", bg = "#00e5ff", blend = 0 },
           CursorLine = { bg = "#0f111a" },
           NormalFloat = { bg = "#0f111a" },
           FloatBorder = { fg = "#00e5ff", bg = "#0f111a" },
@@ -237,52 +288,87 @@ local lazy_plugins = {
     "folke/noice.nvim",
     dependencies = { "MunifTanjim/nui.nvim" },
     config = function()
+      -- Jarvis HUD highlight groups for noice
+      vim.api.nvim_set_hl(0, "NoiceCmdlinePopupBorder", { fg = "#00e5ff", bg = "#0a0e14" })
+      vim.api.nvim_set_hl(0, "NoiceCmdlinePopupTitle", { fg = "#00e5ff", bg = "#0a0e14", bold = true })
+      vim.api.nvim_set_hl(0, "NoiceCmdlineIcon", { fg = "#00e5ff" })
+      vim.api.nvim_set_hl(0, "NoiceConfirm", { bg = "#0a0e14" })
+      vim.api.nvim_set_hl(0, "NoiceConfirmBorder", { fg = "#00e5ff", bg = "#0a0e14" })
+      vim.api.nvim_set_hl(0, "NoiceMini", { fg = "#00e5ff", bg = "#0a0e14" })
+
+      local holo = require("hugo.ui.holo_borders")
+      local holo_border = holo.border()
+
       require("noice").setup({
         presets = {
           bottom_search = true,
           command_palette = true,
           long_message_to_split = true,
-          inc_rename = true
+          inc_rename = true,
         },
         views = {
-          lsp = {
-            progress = { enabled = false },
-            hover = { enabled = true },
-            signature = { enabled = true },
-          },
-          messages = {
-            enaled = false,
-          },
-          notify = {
-            enabled = false,
-          },
-          views = {
-            -- notify = {
-            --   replace = true,
-            --   merge = false,
-            --   win_options = { winblend = 0 },
-            -- }
-          },
           cmdline_popup = {
-            border = { style = "rounded", text = { top = " COMMAND " } },
+            border = {
+              style = holo_border,
+              text = { top = " ▸ JARVIS COMMAND " },
+            },
             position = { row = 1, col = "50%" },
             size = { width = 80, height = "auto" },
             win_options = {
               wrap = true,
               linebreak = true,
-              winblend = 0
-            }
-          },
-          routes = {
-            {
-              filter = { event = "msg_show" },
-              view = "cmdline",
-
+              winblend = 0,
+              winhighlight = holo.winhighlight(),
             },
-            {
-              filter = { event = "notify" },
-              opts = { skip = true },
-            }
+          },
+          hover = {
+            border = { style = holo_border },
+            win_options = {
+              winblend = 10,
+              winhighlight = holo.winhighlight(),
+            },
+          },
+          popup = {
+            border = { style = holo_border },
+            win_options = {
+              winhighlight = holo.winhighlight(),
+            },
+          },
+          mini = {
+            win_options = {
+              winblend = 15,
+              winhighlight = "Normal:NoiceMini",
+            },
+          },
+        },
+        lsp = {
+          progress = { enabled = false },
+          hover = { enabled = true },
+          signature = { enabled = true },
+          override = {
+            ["vim.lsp.util.convert_input_to_markdown_lines"] = true,
+            ["vim.lsp.util.stylize_markdown"] = true,
+            ["cmp.entry.get_documentation"] = true,
+          },
+        },
+        messages = {
+          enabled = false,
+        },
+        notify = {
+          enabled = false,
+        },
+        routes = {
+          {
+            filter = { event = "msg_show", kind = "confirm" },
+            opts = { skip = true },
+          },
+          {
+            filter = { event = "msg_show" },
+            view = "cmdline",
+          },
+          {
+            filter = { event = "notify" },
+            opts = { skip = true },
           },
         },
       })
