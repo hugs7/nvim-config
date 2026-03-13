@@ -6,33 +6,41 @@ arc_timer:start(100, 100, vim.schedule_wrap(function()
   arc_idx = (arc_idx % #arc_frames) + 1
 end))
 
-local function arc_reactor()
+-- Cache LSP + diagnostic results, refresh only on relevant events
+local cached_lsp_name = "STANDBY"
+local cached_diag_e = 0
+local cached_diag_w = 0
+
+local function refresh_statusline_cache()
   local clients = vim.lsp.get_clients({ bufnr = 0 })
-  local icon = arc_frames[arc_idx]
-  if #clients == 0 then
-    return icon .. " STANDBY"
-  end
-  -- Show spinning reactor with first LSP name
-  return icon .. " " .. clients[1].name
+  cached_lsp_name = #clients > 0 and clients[1].name or "STANDBY"
+  cached_diag_e = #vim.diagnostic.get(nil, { severity = 1 })
+  cached_diag_w = #vim.diagnostic.get(nil, { severity = 2 })
 end
 
--- Diagnostic count component
+vim.api.nvim_create_autocmd({ "DiagnosticChanged", "LspAttach", "LspDetach", "BufEnter" }, {
+  callback = function()
+    vim.schedule(refresh_statusline_cache)
+  end,
+})
+
+local function arc_reactor()
+  local icon = arc_frames[arc_idx]
+  return icon .. " " .. cached_lsp_name
+end
+
 local function diag_summary()
-  local e = #vim.diagnostic.get(nil, { severity = 1 })
-  local w = #vim.diagnostic.get(nil, { severity = 2 })
-  if e > 0 then
-    return "▲ " .. e .. "E " .. w .. "W"
-  elseif w > 0 then
-    return "● " .. w .. "W"
+  if cached_diag_e > 0 then
+    return "▲ " .. cached_diag_e .. "E " .. cached_diag_w .. "W"
+  elseif cached_diag_w > 0 then
+    return "● " .. cached_diag_w .. "W"
   end
   return "◆ CLEAR"
 end
 
 local function diag_color()
-  local e = #vim.diagnostic.get(nil, { severity = 1 })
-  local w = #vim.diagnostic.get(nil, { severity = 2 })
-  if e > 0 then return { fg = "#ff4444", gui = "bold" } end
-  if w > 0 then return { fg = "#ff9e64" } end
+  if cached_diag_e > 0 then return { fg = "#ff4444", gui = "bold" } end
+  if cached_diag_w > 0 then return { fg = "#ff9e64" } end
   return { fg = "#00ff88" }
 end
 
