@@ -62,11 +62,21 @@ local servers = {
   html = {},
   cssls = {},
   tailwindcss = {
+    root_markers = {
+      "tailwind.config.js",
+      "tailwind.config.cjs",
+      "tailwind.config.mjs",
+      "tailwind.config.ts",
+      "postcss.config.js",
+      "postcss.config.cjs",
+      "postcss.config.mjs",
+      "postcss.config.ts",
+      "package.json",
+    },
     settings = {
       tailwindCSS = {
         experimental = {
           classRegex = {
-            -- optional: support for clsx, cva, cn, twMerge etc.
             "clsx\\(([^)]*)\\)",
             "cn\\(([^)]*)\\)",
             "cva\\(([^)]*)\\)",
