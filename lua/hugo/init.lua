@@ -2,6 +2,7 @@
 -- Core (must load before plugins)
 -- =========================
 require("hugo.core.options")
+require("hugo.core.bigfile")
 
 -- =========================
 -- Plugin manager
