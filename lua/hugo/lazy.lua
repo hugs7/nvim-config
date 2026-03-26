@@ -49,12 +49,8 @@ local lazy_plugins = {
     "nvim-treesitter/nvim-treesitter",
     build = ":TSUpdate",
     config = function()
-      require("nvim-treesitter.configs").setup({
+      require("nvim-treesitter").setup({
         ensure_installed = { "lua", "typescript", "javascript", "json", "tsx", "html", "css" },
-        highlight = {
-          enable = true,
-          additional_vim_regex_highlighting = false
-        },
       })
     end,
   },
@@ -125,6 +121,7 @@ local lazy_plugins = {
   },
   {
     "gorbit99/codewindow.nvim",
+    enabled = false, -- incompatible with nvim-treesitter v1.0+ (removed ts_utils)
     event = "BufReadPost",
     config = function()
       local codewindow = require("codewindow")
