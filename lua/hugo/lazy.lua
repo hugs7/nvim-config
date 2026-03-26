@@ -16,7 +16,8 @@ local lazy_plugins = {
   -- LSP + tooling
   {
     "williamboman/mason.nvim",
-    build = ":MasonUpdate"
+    build = ":MasonUpdate",
+    config = true,
   },
   "williamboman/mason-lspconfig.nvim",
   "neovim/nvim-lspconfig",
