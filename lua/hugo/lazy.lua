@@ -352,15 +352,20 @@ local lazy_plugins = {
           },
         },
         messages = {
-          enabled = false,
+          enabled = true,
+          view = "split",
         },
         notify = {
           enabled = false,
         },
         routes = {
           {
-            filter = { event = "msg_show", kind = "confirm" },
+            filter = { event = "msg_show", kind = "return_prompt" },
             opts = { skip = true },
+          },
+          {
+            filter = { event = "msg_show", min_height = 5 },
+            view = "split",
           },
           {
             filter = { event = "msg_show" },
