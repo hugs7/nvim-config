@@ -38,8 +38,13 @@ local lazy_plugins = {
         opts = {
           enable_close = true,
           enable_rename = true,
-          enable_close_on_slash = false
-        }
+          enable_close_on_slash = false,
+        },
+        aliases = {
+          ["javascriptreact"] = "typescriptreact",
+          ["javascript.jsx"] = "typescriptreact",
+          ["typescript.tsx"] = "typescriptreact",
+        },
       })
     end,
   },
@@ -333,8 +338,10 @@ local lazy_plugins = {
             },
           },
           mini = {
+            timeout = 3000,
+            position = { row = -2, col = "100%" },
             win_options = {
-              winblend = 15,
+              winblend = 50,
               winhighlight = "Normal:NoiceMini",
             },
           },
@@ -351,7 +358,7 @@ local lazy_plugins = {
         },
         messages = {
           enabled = true,
-          view = "split",
+          view = "mini",
         },
         notify = {
           enabled = false,
@@ -362,12 +369,8 @@ local lazy_plugins = {
             opts = { skip = true },
           },
           {
-            filter = { event = "msg_show", min_height = 5 },
-            view = "split",
-          },
-          {
             filter = { event = "msg_show" },
-            view = "cmdline",
+            view = "mini",
           },
           {
             filter = { event = "notify" },
