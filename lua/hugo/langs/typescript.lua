@@ -16,9 +16,12 @@ local function is_react_import(line)
     or line:match("^import .+ from ['\"]react/")
 end
 
+local function is_alias_import(line)
+  return line:match('^import .+ from ["\']@/') or line:match("^import .+ from ['\"]@/")
+end
+
 local function is_relative_import(line)
   return line:match('^import .+ from ["\']%.') or line:match("^import .+ from ['\"]%.")
-    or line:match('^import .+ from ["\']@/') or line:match("^import .+ from ['\"]@/")
 end
 
 local function is_import_line(line)
@@ -74,11 +77,14 @@ local function sort_imports_custom(bufnr)
   -- Classify imports into groups
   local react_imports = {}
   local external_imports = {}
+  local alias_imports = {}
   local relative_imports = {}
 
   for _, stmt in ipairs(import_statements) do
     if is_react_import(stmt) then
       table.insert(react_imports, stmt)
+    elseif is_alias_import(stmt) then
+      table.insert(alias_imports, stmt)
     elseif is_relative_import(stmt) then
       table.insert(relative_imports, stmt)
     else
@@ -88,6 +94,7 @@ local function sort_imports_custom(bufnr)
 
   table.sort(react_imports)
   table.sort(external_imports)
+  table.sort(alias_imports)
   table.sort(relative_imports)
 
   -- Build new import block
@@ -105,6 +112,7 @@ local function sort_imports_custom(bufnr)
 
   add_group(react_imports)
   add_group(external_imports)
+  add_group(alias_imports)
   add_group(relative_imports)
 
   -- Append the rest of the file (skip old import block)
