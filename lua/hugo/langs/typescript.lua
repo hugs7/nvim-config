@@ -18,6 +18,7 @@ end
 
 local function is_relative_import(line)
   return line:match('^import .+ from ["\']%.') or line:match("^import .+ from ['\"]%.")
+    or line:match('^import .+ from ["\']@/') or line:match("^import .+ from ['\"]@/")
 end
 
 local function is_import_line(line)
