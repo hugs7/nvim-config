@@ -92,6 +92,31 @@ local function sort_imports_custom(bufnr)
     end
   end
 
+  -- Sort named imports within {} alphabetically
+  local function sort_named_imports(stmt)
+    local before, names, after = stmt:match("^(import%s+{)(.+)(}%s+from.+)$")
+    if not names then
+      -- Try `import type {`
+      before, names, after = stmt:match("^(import%s+type%s+{)(.+)(}%s+from.+)$")
+    end
+    if not names then
+      return stmt
+    end
+    local name_list = {}
+    for name in names:gmatch("[^,]+") do
+      local trimmed = vim.trim(name)
+      if trimmed ~= "" then
+        table.insert(name_list, trimmed)
+      end
+    end
+    table.sort(name_list)
+    return before .. " " .. table.concat(name_list, ", ") .. " " .. after
+  end
+
+  for i, stmt in ipairs(import_statements) do
+    import_statements[i] = sort_named_imports(stmt)
+  end
+
   -- Sort by module path (the `from '...'` part), not by imported names
   local function get_module_path(stmt)
     return stmt:match("from%s+['\"]([^'\"]+)['\"]") or ""
