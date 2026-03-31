@@ -25,6 +25,19 @@ local hl_groups = {}      -- hex → hl_group_name
 local active_bufs = {}    -- buf → true
 local timers = {}         -- buf → timer
 
+--- Find the project root containing .nvim/tailwind-theme.json
+local function find_root(buf)
+  local res = vim.fs.find(".nvim", {
+    upward = true,
+    path = vim.api.nvim_buf_get_name(buf),
+    type = "directory",
+  })
+  if res and #res > 0 then
+    return vim.fn.fnamemodify(res[1], ":h")
+  end
+  return nil
+end
+
 -- ---------------------------------------------------------------------------
 -- CSS parsing
 -- ---------------------------------------------------------------------------
@@ -66,7 +79,7 @@ local function resolve(val, lookup, d)
   end))
 end
 
-local function load_colors(root, brand)
+local function load_colors(root, brand, mode)
   local colors_css = read_file(root .. "/" .. STYLE_PKG .. "/shared/colors.css")
   local theme_css = read_file(root .. "/" .. STYLE_PKG .. "/themes/theme-" .. brand .. ".css")
   if not colors_css or not theme_css then return nil end
@@ -81,13 +94,20 @@ local function load_colors(root, brand)
     end
   end
 
-  -- Variable lookup: reserved + brand
+  -- Variable lookup: reserved + brand primitives (light mode base)
   local lookup = {}
   for _, v in ipairs(extract_vars(colors_css, ":root", nil)) do
     lookup[v.name] = v.value
   end
   for _, v in ipairs(extract_vars(theme_css, "%[data%-brand=", "data%-theme")) do
     lookup[v.name] = v.value
+  end
+
+  -- Override with dark mode semantics if requested
+  if mode == "dark" then
+    for _, v in ipairs(extract_vars(theme_css, "data%-theme", nil)) do
+      lookup[v.name] = v.value
+    end
   end
 
   -- Resolve to hex
@@ -128,7 +148,7 @@ end
 
 local function highlight(buf)
   if not vim.api.nvim_buf_is_valid(buf) then return end
-  local root = vim.fs.root(buf, "package.json")
+  local root = find_root(buf)
   if not root or not project_colors[root] then return end
 
   local cmap = project_colors[root]
@@ -187,7 +207,7 @@ local function ensure_loaded(root)
 
   if not vim.uv.fs_stat(root .. "/" .. STYLE_PKG) then return false end
 
-  local cmap = load_colors(root, cfg.brand)
+  local cmap = load_colors(root, cfg.brand, cfg.mode or "light")
   if not cmap then return false end
 
   project_colors[root] = cmap
@@ -206,7 +226,7 @@ vim.api.nvim_create_autocmd({ "BufEnter", "FileType" }, {
     local ft = vim.bo[ev.buf].filetype
     if not FILETYPES[ft] then return end
 
-    local root = vim.fs.root(ev.buf, "package.json")
+    local root = find_root(ev.buf)
     if not root then return end
     if not ensure_loaded(root) then return end
 
@@ -214,6 +234,54 @@ vim.api.nvim_create_autocmd({ "BufEnter", "FileType" }, {
     schedule(ev.buf)
   end,
 })
+
+-- Debug command: check what the plugin sees
+vim.api.nvim_create_user_command("TailwindColorsDebug", function()
+  local buf = vim.api.nvim_get_current_buf()
+  local ft = vim.bo[buf].filetype
+  print("Filetype: " .. ft .. " (tracked: " .. tostring(FILETYPES[ft] or false) .. ")")
+
+  local root = find_root(buf)
+  print("Project root: " .. (root or "NOT FOUND"))
+  if not root then return end
+
+  print("Theme config: " .. root .. "/" .. THEME_JSON)
+  print("  exists: " .. tostring(vim.uv.fs_stat(root .. "/" .. THEME_JSON) ~= nil))
+
+  print("Style pkg: " .. root .. "/" .. STYLE_PKG)
+  print("  exists: " .. tostring(vim.uv.fs_stat(root .. "/" .. STYLE_PKG) ~= nil))
+
+  local cfg_raw = read_file(root .. "/" .. THEME_JSON)
+  if cfg_raw then
+    local ok, cfg = pcall(vim.json.decode, cfg_raw)
+    print("  brand: " .. (ok and cfg.brand or "PARSE ERROR"))
+  end
+
+  if project_colors[root] then
+    local count = 0
+    for _ in pairs(project_colors[root]) do count = count + 1 end
+    print("Cached colors: " .. count)
+    -- Show a few examples
+    local i = 0
+    for name, hex in pairs(project_colors[root]) do
+      print("  " .. name .. " → " .. hex)
+      i = i + 1
+      if i >= 5 then break end
+    end
+  else
+    print("Cached colors: NONE (not loaded)")
+    -- Try loading now
+    if ensure_loaded(root) then
+      local count = 0
+      for _ in pairs(project_colors[root]) do count = count + 1 end
+      print("After manual load: " .. count .. " colors")
+    else
+      print("Manual load FAILED")
+    end
+  end
+
+  print("Buffer active: " .. tostring(active_bufs[buf] or false))
+end, {})
 
 vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, {
   group = group,
