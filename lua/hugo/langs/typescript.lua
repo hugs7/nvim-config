@@ -140,13 +140,14 @@ local function remove_unused()
 end
 
 local function fix_imports_sequential()
-  -- Remove unused imports first
+  -- Remove unused imports first (async LSP action)
   remove_unused()
 
-  -- Wait a bit then organize imports to avoid timing issues
+  -- Wait for LSP to apply the removal, then sort
   vim.defer_fn(function()
-    organize_imports()
-  end, 50)
+    sort_imports_custom()
+    deferred_format(100)
+  end, 500)
 end
 
 -- Export the function for use in keymaps
