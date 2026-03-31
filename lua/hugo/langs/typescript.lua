@@ -9,12 +9,105 @@ local function deferred_format(delay)
   end, delay or 100)
 end
 
-local function organize_imports(bufnr)
-  vim.lsp.buf.execute_command({
-    command = "_typescript.organizeImports",
-    arguments = { vim.api.nvim_buf_get_name(bufnr or 0) },
-  })
+local function is_react_import(line)
+  return line:match('^import .+ from ["\']react["\']')
+    or line:match('^import .+ from ["\']react/')
+    or line:match("^import .+ from ['\"]react['\"]")
+    or line:match("^import .+ from ['\"]react/")
+end
 
+local function is_relative_import(line)
+  return line:match('^import .+ from ["\']%.') or line:match("^import .+ from ['\"]%.")
+end
+
+local function is_import_line(line)
+  return line:match("^import ")
+end
+
+local function sort_imports_custom(bufnr)
+  bufnr = bufnr or 0
+  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+
+  -- Find the import block (contiguous imports + blank lines at the top)
+  local import_end = 0
+  local saw_non_blank = false
+  for i, line in ipairs(lines) do
+    if is_import_line(line) then
+      import_end = i
+      saw_non_blank = true
+    elseif line:match("^%s*$") and saw_non_blank then
+      -- Allow blank lines within the import block
+    else
+      if saw_non_blank then
+        break
+      end
+    end
+  end
+
+  if import_end == 0 then
+    return
+  end
+
+  -- Collect all import lines (skip blanks)
+  local react_imports = {}
+  local external_imports = {}
+  local relative_imports = {}
+
+  for i = 1, import_end do
+    local line = lines[i]
+    if is_import_line(line) then
+      if is_react_import(line) then
+        table.insert(react_imports, line)
+      elseif is_relative_import(line) then
+        table.insert(relative_imports, line)
+      else
+        table.insert(external_imports, line)
+      end
+    end
+  end
+
+  table.sort(react_imports)
+  table.sort(external_imports)
+  table.sort(relative_imports)
+
+  -- Build new import block
+  local new_lines = {}
+  local function add_group(group)
+    if #group > 0 then
+      if #new_lines > 0 then
+        table.insert(new_lines, "")
+      end
+      for _, l in ipairs(group) do
+        table.insert(new_lines, l)
+      end
+    end
+  end
+
+  add_group(react_imports)
+  add_group(external_imports)
+  add_group(relative_imports)
+
+  -- Append the rest of the file (skip old import block)
+  local rest_start = import_end + 1
+  -- Skip any trailing blank lines after the import block
+  while rest_start <= #lines and lines[rest_start]:match("^%s*$") do
+    rest_start = rest_start + 1
+  end
+
+  -- Add a blank line separator before the rest of the code
+  if rest_start <= #lines then
+    table.insert(new_lines, "")
+  end
+
+  for i = rest_start, #lines do
+    table.insert(new_lines, lines[i])
+  end
+
+  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, new_lines)
+end
+
+local function organize_imports(bufnr)
+  sort_imports_custom(bufnr)
   deferred_format()
 end
 
@@ -52,5 +145,30 @@ end, { desc = "Remove unused TypeScript imports" })
 vim.api.nvim_create_user_command("FixImports", function()
   fix_imports_sequential()
 end, { desc = "Sort and remove unused imports" })
+
+vim.api.nvim_create_user_command("FixImportsAll", function()
+  local cwd = vim.fn.getcwd()
+  local files = vim.fn.globpath(cwd, "**/*.ts", false, true)
+  vim.list_extend(files, vim.fn.globpath(cwd, "**/*.tsx", false, true))
+
+  -- Filter out node_modules/dist
+  files = vim.tbl_filter(function(f)
+    return not f:match("node_modules") and not f:match("/dist/") and not f:match("/build/")
+  end, files)
+
+  local count = 0
+  for _, file in ipairs(files) do
+    vim.cmd("edit " .. vim.fn.fnameescape(file))
+    local bufnr = vim.api.nvim_get_current_buf()
+    sort_imports_custom(bufnr)
+    -- Only write if modified
+    if vim.bo[bufnr].modified then
+      vim.cmd("write")
+      count = count + 1
+    end
+  end
+
+  print("Fixed imports in " .. count .. " files")
+end, { desc = "Fix imports in all ts/tsx files in the project" })
 
 return M
