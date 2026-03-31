@@ -95,7 +95,24 @@ local function sort_imports_custom(bufnr)
   table.sort(react_imports)
   table.sort(external_imports)
   table.sort(alias_imports)
-  table.sort(relative_imports)
+
+  -- Sort relative imports: more ../ first, then alphabetical
+  local function count_parent_dirs(stmt)
+    local path = stmt:match("from%s+['\"]([^'\"]+)['\"]") or ""
+    local count = 0
+    for _ in path:gmatch("%.%./") do
+      count = count + 1
+    end
+    return count
+  end
+
+  table.sort(relative_imports, function(a, b)
+    local da, db = count_parent_dirs(a), count_parent_dirs(b)
+    if da ~= db then
+      return da > db
+    end
+    return a < b
+  end)
 
   -- Build new import block
   local new_lines = {}
