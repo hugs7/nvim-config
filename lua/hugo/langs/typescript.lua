@@ -41,7 +41,7 @@ local function sort_imports_custom(bufnr)
   for i, line in ipairs(lines) do
     if in_import then
       table.insert(current_parts, vim.trim(line))
-      if line:match("from%s+['\"]") or line:match("^}.*from%s+['\"]") then
+      if line:match("from%s+['\"]") or vim.trim(line):match("^}.*from%s+['\"]") then
         -- End of multi-line import
         local joined = table.concat(current_parts, " ")
         -- Normalize whitespace: collapse "{ foo ,  bar }" style
@@ -94,10 +94,10 @@ local function sort_imports_custom(bufnr)
 
   -- Sort named imports within {} alphabetically
   local function sort_named_imports(stmt)
-    local before, names, after = stmt:match("^(import%s+{)(.+)(}%s+from.+)$")
+    local before, names, after = stmt:match("^(import%s+{)(.-)(}%s+from.+)$")
     if not names then
       -- Try `import type {`
-      before, names, after = stmt:match("^(import%s+type%s+{)(.+)(}%s+from.+)$")
+      before, names, after = stmt:match("^(import%s+type%s+{)(.-)(}%s+from.+)$")
     end
     if not names then
       return stmt
