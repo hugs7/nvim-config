@@ -32,6 +32,7 @@ require('hugo.tools.autocomplete')
 require('hugo.tools.debug')
 require('hugo.tools.lsp')
 require("hugo.tools.mason")
+require("hugo.tools.tailwind_colors")
 
 -- =========================
 -- Languages
