@@ -112,8 +112,12 @@ local function sort_imports_custom(bufnr)
 
   add_group(react_imports)
   add_group(external_imports)
-  add_group(alias_imports)
-  add_group(relative_imports)
+
+  -- @/ alias and relative imports share one group, alias first
+  local internal_imports = {}
+  vim.list_extend(internal_imports, alias_imports)
+  vim.list_extend(internal_imports, relative_imports)
+  add_group(internal_imports)
 
   -- Append the rest of the file (skip old import block)
   local rest_start = import_end + 1
