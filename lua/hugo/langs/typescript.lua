@@ -28,41 +28,60 @@ local function sort_imports_custom(bufnr)
   bufnr = bufnr or 0
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
 
-  -- Find the import block (contiguous imports + blank lines at the top)
+  -- Parse imports into logical statements, handling multi-line imports
+  local import_statements = {} -- each entry is a single-line version of the import
   local import_end = 0
-  local saw_non_blank = false
+  local in_import = false
+  local current_parts = {}
+
   for i, line in ipairs(lines) do
-    if is_import_line(line) then
-      import_end = i
-      saw_non_blank = true
-    elseif line:match("^%s*$") and saw_non_blank then
-      -- Allow blank lines within the import block
+    if in_import then
+      table.insert(current_parts, vim.trim(line))
+      if line:match("from%s+['\"]") or line:match("^}.*from%s+['\"]") then
+        -- End of multi-line import
+        local joined = table.concat(current_parts, " ")
+        -- Normalize whitespace: collapse "{ foo ,  bar }" style
+        joined = joined:gsub("%s+", " ")
+        table.insert(import_statements, joined)
+        current_parts = {}
+        in_import = false
+        import_end = i
+      end
+    elseif is_import_line(line) then
+      -- Check if the import is complete on one line (has `from`)
+      if line:match("from%s+['\"]") then
+        table.insert(import_statements, line)
+        import_end = i
+      else
+        -- Multi-line import starts here
+        in_import = true
+        current_parts = { line }
+      end
+    elseif line:match("^%s*$") and import_end > 0 then
+      -- Allow blank lines within import block
     else
-      if saw_non_blank then
+      if import_end > 0 then
         break
       end
     end
   end
 
-  if import_end == 0 then
+  if #import_statements == 0 then
     return
   end
 
-  -- Collect all import lines (skip blanks)
+  -- Classify imports into groups
   local react_imports = {}
   local external_imports = {}
   local relative_imports = {}
 
-  for i = 1, import_end do
-    local line = lines[i]
-    if is_import_line(line) then
-      if is_react_import(line) then
-        table.insert(react_imports, line)
-      elseif is_relative_import(line) then
-        table.insert(relative_imports, line)
-      else
-        table.insert(external_imports, line)
-      end
+  for _, stmt in ipairs(import_statements) do
+    if is_react_import(stmt) then
+      table.insert(react_imports, stmt)
+    elseif is_relative_import(stmt) then
+      table.insert(relative_imports, stmt)
+    else
+      table.insert(external_imports, stmt)
     end
   end
 
@@ -89,12 +108,10 @@ local function sort_imports_custom(bufnr)
 
   -- Append the rest of the file (skip old import block)
   local rest_start = import_end + 1
-  -- Skip any trailing blank lines after the import block
   while rest_start <= #lines and lines[rest_start]:match("^%s*$") do
     rest_start = rest_start + 1
   end
 
-  -- Add a blank line separator before the rest of the code
   if rest_start <= #lines then
     table.insert(new_lines, "")
   end
