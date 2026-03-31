@@ -92,15 +92,23 @@ local function sort_imports_custom(bufnr)
     end
   end
 
-  table.sort(react_imports)
-  table.sort(external_imports)
-  table.sort(alias_imports)
+  -- Sort by module path (the `from '...'` part), not by imported names
+  local function get_module_path(stmt)
+    return stmt:match("from%s+['\"]([^'\"]+)['\"]") or ""
+  end
 
-  -- Sort relative imports: more ../ first, then alphabetical
+  local function sort_by_path(a, b)
+    return get_module_path(a) < get_module_path(b)
+  end
+
+  table.sort(react_imports, sort_by_path)
+  table.sort(external_imports, sort_by_path)
+  table.sort(alias_imports, sort_by_path)
+
+  -- Sort relative imports: more ../ first, then by path
   local function count_parent_dirs(stmt)
-    local path = stmt:match("from%s+['\"]([^'\"]+)['\"]") or ""
     local count = 0
-    for _ in path:gmatch("%.%./") do
+    for _ in get_module_path(stmt):gmatch("%.%./") do
       count = count + 1
     end
     return count
@@ -111,7 +119,7 @@ local function sort_imports_custom(bufnr)
     if da ~= db then
       return da > db
     end
-    return a < b
+    return get_module_path(a) < get_module_path(b)
   end)
 
   -- Build new import block
