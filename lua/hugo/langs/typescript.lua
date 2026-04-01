@@ -74,24 +74,6 @@ local function sort_imports_custom(bufnr)
     return
   end
 
-  -- Classify imports into groups
-  local react_imports = {}
-  local external_imports = {}
-  local alias_imports = {}
-  local relative_imports = {}
-
-  for _, stmt in ipairs(import_statements) do
-    if is_react_import(stmt) then
-      table.insert(react_imports, stmt)
-    elseif is_alias_import(stmt) then
-      table.insert(alias_imports, stmt)
-    elseif is_relative_import(stmt) then
-      table.insert(relative_imports, stmt)
-    else
-      table.insert(external_imports, stmt)
-    end
-  end
-
   -- Sort named imports within {} alphabetically
   local function sort_named_imports(stmt)
     local before, names, after = stmt:match("^(import%s+{)(.-)(}%s+from.+)$")
@@ -115,6 +97,24 @@ local function sort_imports_custom(bufnr)
 
   for i, stmt in ipairs(import_statements) do
     import_statements[i] = sort_named_imports(stmt)
+  end
+
+  -- Classify imports into groups
+  local react_imports = {}
+  local external_imports = {}
+  local alias_imports = {}
+  local relative_imports = {}
+
+  for _, stmt in ipairs(import_statements) do
+    if is_react_import(stmt) then
+      table.insert(react_imports, stmt)
+    elseif is_alias_import(stmt) then
+      table.insert(alias_imports, stmt)
+    elseif is_relative_import(stmt) then
+      table.insert(relative_imports, stmt)
+    else
+      table.insert(external_imports, stmt)
+    end
   end
 
   -- Sort by module path (the `from '...'` part), not by imported names
