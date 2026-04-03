@@ -15,9 +15,14 @@ local PREFIXES = {
 }
 
 local FILETYPES = {
-  typescriptreact = true, javascriptreact = true,
-  typescript = true, javascript = true,
-  html = true, css = true, svelte = true, vue = true,
+  typescriptreact = true,
+  javascriptreact = true,
+  typescript = true,
+  javascript = true,
+  html = true,
+  css = true,
+  svelte = true,
+  vue = true,
 }
 
 local project_colors = {} -- root → color_map
@@ -137,12 +142,29 @@ local function contrast_fg(hex)
       and "#000000" or "#ffffff"
 end
 
-local function get_hl(hex)
-  if hl_groups[hex] then return hl_groups[hex] end
-  local h = hex:match("^(#%x%x%x%x%x%x)") or hex
-  local name = "TwCol_" .. h:sub(2)
+local function blend(hex, opacity)
+  if not opacity or opacity >= 100 then return hex end
+  local a = opacity / 100
+  -- Blend against editor background (fallback to #1e1e2e)
+  local bg_hl = vim.api.nvim_get_hl(0, { name = "Normal" })
+  local bg = bg_hl.bg or 0x1e1e2e
+  local bg_r, bg_g, bg_b = math.floor(bg / 65536) % 256, math.floor(bg / 256) % 256, bg % 256
+  local r = tonumber(hex:sub(2, 3), 16) or 0
+  local g = tonumber(hex:sub(4, 5), 16) or 0
+  local b = tonumber(hex:sub(6, 7), 16) or 0
+  local nr = math.floor(r * a + bg_r * (1 - a) + 0.5)
+  local ng = math.floor(g * a + bg_g * (1 - a) + 0.5)
+  local nb = math.floor(b * a + bg_b * (1 - a) + 0.5)
+  return string.format("#%02x%02x%02x", nr, ng, nb)
+end
+
+local function get_hl(hex, opacity)
+  local key = hex .. "/" .. (opacity or 100)
+  if hl_groups[key] then return hl_groups[key] end
+  local h = blend(hex:match("^(#%x%x%x%x%x%x)") or hex, opacity)
+  local name = "TwCol_" .. h:sub(2) .. "_" .. (opacity or 100)
   vim.api.nvim_set_hl(0, name, { bg = h, fg = contrast_fg(h) })
-  hl_groups[hex] = name
+  hl_groups[key] = name
   return name
 end
 
@@ -163,19 +185,22 @@ local function highlight(buf)
       local word = line:sub(ws, we)
       -- Strip variant prefixes (hover:, sm:, etc.)
       local class = word:match(":([^:]+)$") or word
-      -- Strip opacity modifier (/50)
-      class = class:match("^([^/]+)") or class
+      -- Extract opacity modifier (/50)
+      local base_class, opacity_str = class:match("^([^/]+)/(%d+)$")
+      if not base_class then base_class = class end
+      local opacity = opacity_str and tonumber(opacity_str) or nil
 
       for _, pfx in ipairs(PREFIXES) do
         local plen = #pfx + 1
-        if class:sub(1, plen) == pfx .. "-" then
-          local hex = cmap[class:sub(plen + 1)]
+        if base_class:sub(1, plen) == pfx .. "-" then
+          local hex = cmap[base_class:sub(plen + 1)]
           if hex then
-            local off = word:find(class, 1, true)
+            local off = word:find(base_class, 1, true)
             local col = ws - 1 + (off and off - 1 or 0)
+            local end_col = col + #class -- highlight includes /opacity
             vim.api.nvim_buf_set_extmark(buf, ns, lnum - 1, col, {
-              end_col = col + #class,
-              hl_group = get_hl(hex),
+              end_col = end_col,
+              hl_group = get_hl(hex, opacity),
             })
             break
           end
@@ -188,8 +213,11 @@ local function highlight(buf)
 end
 
 local function schedule(buf)
-  if timers[buf] then timers[buf]:stop()
-  else timers[buf] = vim.uv.new_timer() end
+  if timers[buf] then
+    timers[buf]:stop()
+  else
+    timers[buf] = vim.uv.new_timer()
+  end
   timers[buf]:start(150, 0, vim.schedule_wrap(function()
     if active_bufs[buf] then highlight(buf) end
   end))
