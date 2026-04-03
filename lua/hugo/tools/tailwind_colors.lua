@@ -236,6 +236,29 @@ vim.api.nvim_create_autocmd({ "BufEnter", "FileType" }, {
 })
 
 -- Debug command: check what the plugin sees
+vim.api.nvim_create_user_command("TailwindColorsInit", function()
+  local root = vim.fn.getcwd()
+  local dir = root .. "/.nvim"
+  local path = dir .. "/" .. THEME_JSON:match("[^/]+$")
+  if not vim.uv.fs_stat(dir) then vim.fn.mkdir(dir, "p") end
+  local f = io.open(path, "w")
+  if not f then
+    vim.notify("Failed to write " .. path, vim.log.levels.ERROR)
+    return
+  end
+  f:write('{\n  "brand": "wbc",\n  "mode": "light"\n}\n')
+  f:close()
+  -- Clear cache so it reloads with the new config
+  project_colors[root] = nil
+  vim.notify("Created " .. path, vim.log.levels.INFO)
+  -- Trigger highlight for current buffer
+  local buf = vim.api.nvim_get_current_buf()
+  if FILETYPES[vim.bo[buf].filetype] and ensure_loaded(root) then
+    active_bufs[buf] = true
+    schedule(buf)
+  end
+end, {})
+
 vim.api.nvim_create_user_command("TailwindColorsDebug", function()
   local buf = vim.api.nvim_get_current_buf()
   local ft = vim.bo[buf].filetype
