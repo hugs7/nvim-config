@@ -62,11 +62,21 @@ local servers = {
   html = {},
   cssls = {},
   tailwindcss = {
+    root_markers = {
+      "tailwind.config.js",
+      "tailwind.config.cjs",
+      "tailwind.config.mjs",
+      "tailwind.config.ts",
+      "postcss.config.js",
+      "postcss.config.cjs",
+      "postcss.config.mjs",
+      "postcss.config.ts",
+      "package.json",
+    },
     settings = {
       tailwindCSS = {
         experimental = {
           classRegex = {
-            -- optional: support for clsx, cva, cn, twMerge etc.
             "clsx\\(([^)]*)\\)",
             "cn\\(([^)]*)\\)",
             "cva\\(([^)]*)\\)",
@@ -86,3 +96,16 @@ for name, opts in pairs(servers) do
 
   vim.lsp.enable(name) -- auto-start when filetype matches
 end
+
+vim.api.nvim_create_user_command("LspRestart", function()
+  local clients = vim.lsp.get_clients({ bufnr = 0 })
+  for _, client in ipairs(clients) do
+    local bufs = vim.tbl_keys(client.attached_buffers)
+    client:stop()
+    vim.defer_fn(function()
+      for _, buf in ipairs(bufs) do
+        vim.lsp.start(client.config, { bufnr = buf })
+      end
+    end, 500)
+  end
+end, { desc = "Restart LSP clients attached to current buffer" })

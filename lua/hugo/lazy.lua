@@ -16,7 +16,8 @@ local lazy_plugins = {
   -- LSP + tooling
   {
     "williamboman/mason.nvim",
-    build = ":MasonUpdate"
+    build = ":MasonUpdate",
+    config = true,
   },
   "williamboman/mason-lspconfig.nvim",
   "neovim/nvim-lspconfig",
@@ -37,8 +38,13 @@ local lazy_plugins = {
         opts = {
           enable_close = true,
           enable_rename = true,
-          enable_close_on_slash = false
-        }
+          enable_close_on_slash = false,
+        },
+        aliases = {
+          ["javascriptreact"] = "typescriptreact",
+          ["javascript.jsx"] = "typescriptreact",
+          ["typescript.tsx"] = "typescriptreact",
+        },
       })
     end,
   },
@@ -48,12 +54,8 @@ local lazy_plugins = {
     "nvim-treesitter/nvim-treesitter",
     build = ":TSUpdate",
     config = function()
-      require("nvim-treesitter.configs").setup({
+      require("nvim-treesitter").setup({
         ensure_installed = { "lua", "typescript", "javascript", "json", "tsx", "html", "css" },
-        highlight = {
-          enable = true,
-          additional_vim_regex_highlighting = false
-        },
       })
     end,
   },
@@ -124,6 +126,7 @@ local lazy_plugins = {
   },
   {
     "gorbit99/codewindow.nvim",
+    enabled = false, -- incompatible with nvim-treesitter v1.0+ (removed ts_utils)
     event = "BufReadPost",
     config = function()
       local codewindow = require("codewindow")
@@ -335,8 +338,10 @@ local lazy_plugins = {
             },
           },
           mini = {
+            timeout = 3000,
+            position = { row = -2, col = "100%" },
             win_options = {
-              winblend = 15,
+              winblend = 50,
               winhighlight = "Normal:NoiceMini",
             },
           },
@@ -353,7 +358,7 @@ local lazy_plugins = {
         },
         messages = {
           enabled = true,
-          view = "split",
+          view = "mini",
         },
         notify = {
           enabled = false,
@@ -364,12 +369,8 @@ local lazy_plugins = {
             opts = { skip = true },
           },
           {
-            filter = { event = "msg_show", min_height = 5 },
-            view = "split",
-          },
-          {
             filter = { event = "msg_show" },
-            view = "cmdline",
+            view = "mini",
           },
           {
             filter = { event = "notify" },
