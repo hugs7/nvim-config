@@ -26,6 +26,14 @@ require("nvim-tree").setup({
             buffer = bufnr
         })
 
+        -- Remap <C-e> from expand-all to scroll down (matching <C-y> for scroll up)
+        pcall(vim.keymap.del, "n", "<C-e>", { buffer = bufnr })
+        vim.keymap.set("n", "<C-e>", function()
+            local keys = vim.api.nvim_replace_termcodes("<C-e>", true, false, true)
+            vim.api.nvim_feedkeys(keys, "n", false)
+        end, opts("Scroll down"))
+        vim.keymap.set("n", "E", api.tree.expand_all, opts("Expand All"))
+
         -- your custom split/tab mappings
         vim.keymap.set("n", "V", api.node.open.vertical, opts("Open: Vertical Split"))
         vim.keymap.set("n", "S", api.node.open.horizontal, opts("Open: Horizontal Split"))
