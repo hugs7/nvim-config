@@ -70,7 +70,7 @@ require("nvim-tree").setup({
     },
     view = {
         width = 35,
-        preserve_window_proportions = true
+        preserve_window_proportions = true,
     },
     filters = {
         git_ignored = false,
@@ -81,6 +81,54 @@ require("nvim-tree").setup({
         enable = true,
         ignore = false
     }
+})
+
+-- =========================
+-- Preserve NvimTree width
+-- =========================
+
+-- Track the last manually set width
+local nvim_tree_width = 35
+
+-- Set winfixwidth when the tree opens so :vs doesn't shrink it
+vim.api.nvim_create_autocmd("FileType", {
+    pattern = "NvimTree",
+    callback = function()
+        vim.wo.winfixwidth = true
+    end,
+})
+
+-- Remember width when manually resized (e.g. via <leader>= / <leader>-)
+vim.api.nvim_create_autocmd("WinResized", {
+    callback = function()
+        for _, winid in ipairs(vim.v.event.windows) do
+            if vim.api.nvim_win_is_valid(winid) then
+                local buf = vim.api.nvim_win_get_buf(winid)
+                if vim.bo[buf].filetype == "NvimTree" then
+                    nvim_tree_width = vim.api.nvim_win_get_width(winid)
+                end
+            end
+        end
+    end,
+})
+
+-- Restore width after splits or other layout changes
+vim.api.nvim_create_autocmd("WinEnter", {
+    callback = function()
+        local api = require("nvim-tree.api")
+        if not api.tree.is_visible() then
+            return
+        end
+        vim.schedule(function()
+            local tree_win = require("nvim-tree.view").get_winnr()
+            if tree_win and vim.api.nvim_win_is_valid(tree_win) then
+                local current = vim.api.nvim_win_get_width(tree_win)
+                if current ~= nvim_tree_width then
+                    vim.api.nvim_win_set_width(tree_win, nvim_tree_width)
+                end
+            end
+        end)
+    end,
 })
 
 -- =========================
