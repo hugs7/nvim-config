@@ -35,6 +35,7 @@ local function sort_imports_custom(bufnr)
   -- Parse imports into logical statements, handling multi-line imports
   local import_statements = {} -- each entry is a single-line version of the import
   local import_end = 0
+  local import_start = 0 -- first line of the import block
   local in_import = false
   local current_parts = {}
 
@@ -52,6 +53,9 @@ local function sort_imports_custom(bufnr)
         import_end = i
       end
     elseif is_import_line(line) then
+      if import_start == 0 then
+        import_start = i
+      end
       -- Check if the import is complete on one line (has `from`)
       if line:match("from%s+['\"]") then
         table.insert(import_statements, line)
@@ -147,8 +151,12 @@ local function sort_imports_custom(bufnr)
     return get_module_path(a) < get_module_path(b)
   end)
 
-  -- Build new import block
+  -- Build new import block, preserving lines before imports (e.g. /// <reference>)
   local new_lines = {}
+  for i = 1, import_start - 1 do
+    table.insert(new_lines, lines[i])
+  end
+
   local function add_group(group)
     if #group > 0 then
       if #new_lines > 0 then
