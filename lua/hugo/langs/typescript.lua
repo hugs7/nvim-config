@@ -331,6 +331,9 @@ vim.api.nvim_create_user_command("SortImportsAll", function()
         vim.cmd("write")
         count = count + 1
       end
+      if bufnr ~= original_buf then
+        vim.api.nvim_buf_delete(bufnr, {})
+      end
     end
   end
 
@@ -385,6 +388,9 @@ vim.api.nvim_create_user_command("FixImportsAll", function()
       if vim.bo[bufnr].modified then
         vim.cmd("write")
         count = count + 1
+      end
+      if bufnr ~= original_buf then
+        vim.api.nvim_buf_delete(bufnr, {})
       end
       process_next()
     end, 500)
