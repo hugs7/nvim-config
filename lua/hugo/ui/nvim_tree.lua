@@ -68,6 +68,9 @@ require("nvim-tree").setup({
         update_root = false,
         ignore_list = {}
     },
+    renderer = {
+        root_folder_label = false,
+    },
     view = {
         width = 35,
         preserve_window_proportions = true,
@@ -95,6 +98,7 @@ vim.api.nvim_create_autocmd("FileType", {
     pattern = "NvimTree",
     callback = function()
         vim.wo.winfixwidth = true
+        vim.wo.winbar = ""
     end,
 })
 
