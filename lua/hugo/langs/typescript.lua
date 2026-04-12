@@ -310,8 +310,12 @@ vim.api.nvim_create_user_command("FixImports", function()
   fix_imports_sequential()
 end, { desc = "Sort and remove unused imports" })
 
-vim.api.nvim_create_user_command("SortImportsAll", function()
-  local output = vim.fn.systemlist("git ls-files '*.ts' '*.tsx'")
+vim.api.nvim_create_user_command("SortImportsAll", function(opts)
+  local path = opts.args ~= "" and opts.args or nil
+  local cmd = path
+    and string.format("git ls-files '%s/**/*.ts' '%s/**/*.tsx'", path, path)
+    or "git ls-files '*.ts' '*.tsx'"
+  local output = vim.fn.systemlist(cmd)
   if vim.v.shell_error ~= 0 then
     print("Not a git repository or git not available")
     return
@@ -339,10 +343,14 @@ vim.api.nvim_create_user_command("SortImportsAll", function()
 
   vim.api.nvim_set_current_buf(original_buf)
   print("Sorted imports in " .. count .. " files")
-end, { desc = "Sort imports in all git-tracked ts/tsx files" })
+end, { nargs = "?", complete = "dir", desc = "Sort imports in all git-tracked ts/tsx files" })
 
-vim.api.nvim_create_user_command("FixImportsAll", function()
-  local output = vim.fn.systemlist("git ls-files '*.ts' '*.tsx'")
+vim.api.nvim_create_user_command("FixImportsAll", function(opts)
+  local path = opts.args ~= "" and opts.args or nil
+  local cmd = path
+    and string.format("git ls-files '%s/**/*.ts' '%s/**/*.tsx'", path, path)
+    or "git ls-files '*.ts' '*.tsx'"
+  local output = vim.fn.systemlist(cmd)
   if vim.v.shell_error ~= 0 then
     print("Not a git repository or git not available")
     return
@@ -397,6 +405,6 @@ vim.api.nvim_create_user_command("FixImportsAll", function()
   end
 
   process_next()
-end, { desc = "Fix imports in all git-tracked ts/tsx files" })
+end, { nargs = "?", complete = "dir", desc = "Fix imports in all git-tracked ts/tsx files" })
 
 return M
