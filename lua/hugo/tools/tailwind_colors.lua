@@ -55,6 +55,26 @@ local function read_file(path)
   return c
 end
 
+--- Recursively read a CSS file, inlining any @import url("...") or @import "..." statements.
+--- Already-visited paths are skipped to avoid cycles.
+local function read_css_recursive(path, visited)
+  visited = visited or {}
+  local abs = vim.fn.resolve(path)
+  if visited[abs] then return "" end
+  visited[abs] = true
+
+  local content = read_file(abs)
+  if not content then return "" end
+
+  local dir = vim.fn.fnamemodify(abs, ":h")
+  -- Replace each @import with the contents of the imported file
+  return content:gsub('@import%s+url%(%s*["\']([^"\']+)["\']%s*%)', function(rel)
+    return read_css_recursive(dir .. "/" .. rel, visited)
+  end):gsub('@import%s+["\']([^"\']+)["\']', function(rel)
+    return read_css_recursive(dir .. "/" .. rel, visited)
+  end)
+end
+
 local function extract_vars(content, sel_pat, stop_pat)
   local vars, inside, depth = {}, false, 0
   for line in content:gmatch("[^\n]+") do
@@ -85,9 +105,9 @@ local function resolve(val, lookup, d)
 end
 
 local function load_colors(root, brand, mode)
-  local colors_css = read_file(root .. "/" .. STYLE_PKG .. "/shared/colors.css")
-  local theme_css = read_file(root .. "/" .. STYLE_PKG .. "/themes/theme-" .. brand .. ".css")
-  if not colors_css or not theme_css then return nil end
+  local colors_css = read_css_recursive(root .. "/" .. STYLE_PKG .. "/shared/colors.css")
+  local theme_css = read_css_recursive(root .. "/" .. STYLE_PKG .. "/themes/theme-" .. brand .. ".css")
+  if colors_css == "" or theme_css == "" then return nil end
 
   -- @theme block: --color-{name} → var(--semantic)
   local theme_map = {}

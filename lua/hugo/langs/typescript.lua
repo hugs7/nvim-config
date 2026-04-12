@@ -78,6 +78,81 @@ local function sort_imports_custom(bufnr)
     return
   end
 
+  -- Trim trailing slashes from import paths
+  for i, stmt in ipairs(import_statements) do
+    import_statements[i] = stmt:gsub("(from%s+['\"])(.-)(['\"])", function(prefix, path, suffix)
+      return prefix .. path:gsub("/+$", "") .. suffix
+    end)
+  end
+
+  -- Merge imports that share the same module path
+  local function get_path(stmt)
+    return stmt:match("from%s+['\"]([^'\"]+)['\"]") or ""
+  end
+
+  local function extract_names(stmt)
+    local names = stmt:match("^import%s+type%s+{(.-)}")
+      or stmt:match("^import%s+{(.-)}")
+    if not names then
+      return nil, nil
+    end
+    local is_type = stmt:match("^import%s+type%s+{") ~= nil
+    local list = {}
+    for name in names:gmatch("[^,]+") do
+      local trimmed = vim.trim(name)
+      if trimmed ~= "" then
+        table.insert(list, trimmed)
+      end
+    end
+    return list, is_type
+  end
+
+  local merged = {}
+  local path_index = {} -- path -> index in merged
+
+  for _, stmt in ipairs(import_statements) do
+    local path = get_path(stmt)
+    local names, is_type = extract_names(stmt)
+    local existing_idx = path_index[path]
+
+    if names and existing_idx then
+      -- Merge into existing import with same path
+      local existing = merged[existing_idx]
+      local existing_names, existing_is_type = extract_names(existing)
+      if existing_names and existing_is_type == is_type then
+        -- Combine name lists, dedup
+        local seen = {}
+        for _, n in ipairs(existing_names) do
+          seen[n] = true
+        end
+        for _, n in ipairs(names) do
+          if not seen[n] then
+            table.insert(existing_names, n)
+            seen[n] = true
+          end
+        end
+        -- Reconstruct the import
+        local keyword = is_type and "import type" or "import"
+        local quote = existing:match("from%s+(['\"])") or "'"
+        merged[existing_idx] = keyword
+          .. " { "
+          .. table.concat(existing_names, ", ")
+          .. " } from "
+          .. quote
+          .. path
+          .. quote
+      else
+        table.insert(merged, stmt)
+      end
+    else
+      table.insert(merged, stmt)
+      if names then
+        path_index[path] = #merged
+      end
+    end
+  end
+  import_statements = merged
+
   -- Sort named imports within {} alphabetically
   local function sort_named_imports(stmt)
     local before, names, after = stmt:match("^(import%s+{)(.-)(}%s+from.+)$")

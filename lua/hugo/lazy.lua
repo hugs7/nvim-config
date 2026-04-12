@@ -85,6 +85,14 @@ local lazy_plugins = {
     config = function()
       require("dropbar").setup({
         bar = {
+          enable = function(buf, win, _)
+            if vim.bo[buf].ft == "NvimTree" then
+              return false
+            end
+            return vim.fn.win_gettype(win) == ""
+              and vim.bo[buf].buftype == ""
+              and vim.api.nvim_buf_get_name(buf) ~= ""
+          end,
           sources = function(buf, _)
             local sources = require("dropbar.sources")
             local utils = require("dropbar.utils")
