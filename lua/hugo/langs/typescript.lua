@@ -421,8 +421,8 @@ local function fix_tailwind_canonical(bufnr)
     if code == "suggestCanonicalClasses" then
       local original, replacement = d.message:match("`([^`]+)` can be written as `([^`]+)`")
       if original and replacement then
-        -- Skip exact width arbitrary values (w-[...]) but allow max-w-, min-w-, etc.
-        if not original:match("^w%-?%[") then
+        -- Skip width arbitrary values (w-[...], min-w-[...], max-w-[...])
+        if not original:match("w%-?%[") then
           replacements[original] = replacement
         end
       end
