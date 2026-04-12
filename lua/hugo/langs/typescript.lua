@@ -310,7 +310,7 @@ vim.api.nvim_create_user_command("FixImports", function()
   fix_imports_sequential()
 end, { desc = "Sort and remove unused imports" })
 
-vim.api.nvim_create_user_command("FixImportsAll", function()
+vim.api.nvim_create_user_command("SortImportsAll", function()
   local output = vim.fn.systemlist("git ls-files '*.ts' '*.tsx'")
   if vim.v.shell_error ~= 0 then
     print("Not a git repository or git not available")
@@ -337,5 +337,60 @@ vim.api.nvim_create_user_command("FixImportsAll", function()
   vim.api.nvim_set_current_buf(original_buf)
   print("Sorted imports in " .. count .. " files")
 end, { desc = "Sort imports in all git-tracked ts/tsx files" })
+
+vim.api.nvim_create_user_command("FixImportsAll", function()
+  local output = vim.fn.systemlist("git ls-files '*.ts' '*.tsx'")
+  if vim.v.shell_error ~= 0 then
+    print("Not a git repository or git not available")
+    return
+  end
+
+  local cwd = vim.fn.getcwd() .. "/"
+  local files = {}
+  for _, rel in ipairs(output) do
+    local file = cwd .. rel
+    if vim.fn.filereadable(file) == 1 then
+      table.insert(files, file)
+    end
+  end
+
+  local total = #files
+  local count = 0
+  local idx = 0
+  local original_buf = vim.api.nvim_get_current_buf()
+
+  local function process_next()
+    idx = idx + 1
+    if idx > total then
+      vim.api.nvim_set_current_buf(original_buf)
+      print("Fixed imports in " .. count .. "/" .. total .. " files")
+      return
+    end
+
+    print(string.format("FixImportsAll: [%d/%d] %s", idx, total, files[idx]:sub(#cwd + 1)))
+    vim.cmd("edit " .. vim.fn.fnameescape(files[idx]))
+    local bufnr = vim.api.nvim_get_current_buf()
+
+    -- Remove unused imports via LSP, then sort
+    vim.lsp.buf.code_action({
+      apply = true,
+      context = {
+        only = { "source.removeUnused.ts" },
+        diagnostics = {},
+      },
+    })
+
+    vim.defer_fn(function()
+      sort_imports_custom(bufnr)
+      if vim.bo[bufnr].modified then
+        vim.cmd("write")
+        count = count + 1
+      end
+      process_next()
+    end, 500)
+  end
+
+  process_next()
+end, { desc = "Fix imports in all git-tracked ts/tsx files" })
 
 return M
