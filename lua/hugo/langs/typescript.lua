@@ -311,28 +311,31 @@ vim.api.nvim_create_user_command("FixImports", function()
 end, { desc = "Sort and remove unused imports" })
 
 vim.api.nvim_create_user_command("FixImportsAll", function()
-  local cwd = vim.fn.getcwd()
-  local files = vim.fn.globpath(cwd, "**/*.ts", false, true)
-  vim.list_extend(files, vim.fn.globpath(cwd, "**/*.tsx", false, true))
+  local output = vim.fn.systemlist("git ls-files '*.ts' '*.tsx'")
+  if vim.v.shell_error ~= 0 then
+    print("Not a git repository or git not available")
+    return
+  end
 
-  -- Filter out node_modules/dist
-  files = vim.tbl_filter(function(f)
-    return not f:match("node_modules") and not f:match("/dist/") and not f:match("/build/")
-  end, files)
-
+  local cwd = vim.fn.getcwd() .. "/"
   local count = 0
-  for _, file in ipairs(files) do
-    vim.cmd("edit " .. vim.fn.fnameescape(file))
-    local bufnr = vim.api.nvim_get_current_buf()
-    sort_imports_custom(bufnr)
-    -- Only write if modified
-    if vim.bo[bufnr].modified then
-      vim.cmd("write")
-      count = count + 1
+  local original_buf = vim.api.nvim_get_current_buf()
+
+  for _, rel in ipairs(output) do
+    local file = cwd .. rel
+    if vim.fn.filereadable(file) == 1 then
+      vim.cmd("edit " .. vim.fn.fnameescape(file))
+      local bufnr = vim.api.nvim_get_current_buf()
+      sort_imports_custom(bufnr)
+      if vim.bo[bufnr].modified then
+        vim.cmd("write")
+        count = count + 1
+      end
     end
   end
 
-  print("Fixed imports in " .. count .. " files")
-end, { desc = "Fix imports in all ts/tsx files in the project" })
+  vim.api.nvim_set_current_buf(original_buf)
+  print("Sorted imports in " .. count .. " files")
+end, { desc = "Sort imports in all git-tracked ts/tsx files" })
 
 return M
