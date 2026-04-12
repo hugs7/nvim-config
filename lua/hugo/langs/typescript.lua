@@ -407,4 +407,109 @@ vim.api.nvim_create_user_command("FixImportsAll", function(opts)
   process_next()
 end, { nargs = "?", complete = "dir", desc = "Fix imports in all git-tracked ts/tsx files" })
 
+-- =========================
+-- Tailwind Canonical Classes
+-- =========================
+
+local function fix_tailwind_canonical(bufnr)
+  bufnr = bufnr or 0
+  local diagnostics = vim.diagnostic.get(bufnr)
+  local replacements = {}
+
+  for _, d in ipairs(diagnostics) do
+    local code = type(d.code) == "string" and d.code or (d.user_data and d.user_data.code) or ""
+    if code == "suggestCanonicalClasses" then
+      local original, replacement = d.message:match("`([^`]+)` can be written as `([^`]+)`")
+      if original and replacement then
+        -- Skip exact width arbitrary values (w-[...]) but allow max-w-, min-w-, etc.
+        if not original:match("^w%-?%[") then
+          replacements[original] = replacement
+        end
+      end
+    end
+  end
+
+  if vim.tbl_isempty(replacements) then
+    return 0
+  end
+
+  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+  local count = 0
+  for i, line in ipairs(lines) do
+    local new_line = line
+    for original, replacement in pairs(replacements) do
+      local escaped = original:gsub("([%(%)%.%%%+%-%*%?%[%]%^%$])", "%%%1")
+      new_line = new_line:gsub(escaped, replacement)
+    end
+    if new_line ~= line then
+      lines[i] = new_line
+      count = count + 1
+    end
+  end
+
+  if count > 0 then
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+  end
+  return count
+end
+
+vim.api.nvim_create_user_command("FixTailwindClasses", function()
+  local count = fix_tailwind_canonical()
+  print("Fixed tailwind classes on " .. count .. " lines")
+end, { desc = "Replace arbitrary Tailwind values with canonical classes" })
+
+vim.api.nvim_create_user_command("FixTailwindClassesAll", function(opts)
+  local path = opts.args ~= "" and opts.args or nil
+  local cmd = path
+    and string.format("git ls-files '%s/**/*.tsx' '%s/**/*.ts'", path, path)
+    or "git ls-files '*.tsx' '*.ts'"
+  local output = vim.fn.systemlist(cmd)
+  if vim.v.shell_error ~= 0 then
+    print("Not a git repository or git not available")
+    return
+  end
+
+  local cwd = vim.fn.getcwd() .. "/"
+  local files = {}
+  for _, rel in ipairs(output) do
+    local file = cwd .. rel
+    if vim.fn.filereadable(file) == 1 then
+      table.insert(files, file)
+    end
+  end
+
+  local total = #files
+  local fixed = 0
+  local idx = 0
+  local original_buf = vim.api.nvim_get_current_buf()
+
+  local function process_next()
+    idx = idx + 1
+    if idx > total then
+      vim.api.nvim_set_current_buf(original_buf)
+      print("FixTailwindClassesAll: fixed " .. fixed .. "/" .. total .. " files")
+      return
+    end
+
+    print(string.format("FixTailwindClassesAll: [%d/%d] %s", idx, total, files[idx]:sub(#cwd + 1)))
+    vim.cmd("edit " .. vim.fn.fnameescape(files[idx]))
+    local bufnr = vim.api.nvim_get_current_buf()
+
+    -- Wait for Tailwind LSP to produce diagnostics
+    vim.defer_fn(function()
+      local count = fix_tailwind_canonical(bufnr)
+      if count > 0 and vim.bo[bufnr].modified then
+        vim.cmd("write")
+        fixed = fixed + 1
+      end
+      if bufnr ~= original_buf then
+        vim.api.nvim_buf_delete(bufnr, {})
+      end
+      process_next()
+    end, 1000)
+  end
+
+  process_next()
+end, { nargs = "?", complete = "dir", desc = "Replace arbitrary Tailwind values with canonical classes in all files" })
+
 return M
