@@ -13,7 +13,7 @@ local debug_config = {
     local dapui = require("dapui")
 
     require("mason-nvim-dap").setup({
-      ensure_installed = { "js-debug-adapter" },
+      ensure_installed = { "js-debug-adapter", "delve" },
     })
 
     dapui.setup()
@@ -64,6 +64,45 @@ local debug_config = {
       },
     }
     dap.configurations.typescript = dap.configurations.javascript
+
+    -- Go (Delve) adapter
+    dap.adapters.delve = {
+      type = "server",
+      port = "${port}",
+      executable = {
+        command = "dlv",
+        args = { "dap", "-l", "127.0.0.1:${port}" },
+      },
+    }
+
+    dap.configurations.go = {
+      {
+        name = "Launch file",
+        type = "delve",
+        request = "launch",
+        program = "${file}",
+      },
+      {
+        name = "Launch package",
+        type = "delve",
+        request = "launch",
+        program = "${fileDirname}",
+      },
+      {
+        name = "Debug test",
+        type = "delve",
+        request = "launch",
+        mode = "test",
+        program = "${file}",
+      },
+      {
+        name = "Debug test (package)",
+        type = "delve",
+        request = "launch",
+        mode = "test",
+        program = "./${relativeFileDirname}",
+      },
+    }
 
     -- Keymaps
     vim.keymap.set("n", "<F5>", dap.continue)

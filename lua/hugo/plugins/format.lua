@@ -11,6 +11,7 @@ local format_config = {
       css = { "prettier" },
       markdown = { "prettier" },
       yaml = { "prettier" },
+      go = { "goimports", "gofumpt" },
     },
     format_on_save = {
       timeout_ms = 1000,
