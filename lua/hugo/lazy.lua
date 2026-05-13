@@ -253,7 +253,20 @@ local lazy_plugins = {
     config = function()
       require("diffview").setup({
         enhanced_diff_hl = true,
+        hooks = {
+          diff_buf_win_enter = function(_, winid)
+            local winhl = vim.wo[winid].winhighlight or ""
+            -- Right pane (additions side): override DiffText to green
+            if winhl:find("DiffviewDiffAddAsDelete") == nil then
+              vim.wo[winid].winhighlight = winhl
+                .. (winhl ~= "" and "," or "")
+                .. "DiffText:DiffviewDiffTextAdd"
+            end
+          end,
+        },
       })
+      -- Green word-level highlight for additions
+      vim.api.nvim_set_hl(0, "DiffviewDiffTextAdd", { bg = "#3e5e3e" })
     end,
   },
 
@@ -280,8 +293,10 @@ local lazy_plugins = {
         color_overrides = {
           vscLineNumber = "#3E4451",
           vscCursorLine = "#1f2233",
-          vscDiffAdded = "#00e5ff",
-          vscDiffChanged = "#00b3ff",
+          vscDiffGreenDark = "#1a2e1a",
+          vscDiffGreenLight = "#2e4e2e",
+          vscDiffRedDark = "#2e1a1a",
+          vscDiffRedLight = "#4e2e2e",
         },
         group_overrides = {
           Cursor = { fg = "#0a0e14", bg = "#00e5ff", blend = 0 },
