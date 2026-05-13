@@ -61,6 +61,17 @@ local servers = {
   jsonls = {},
   html = {},
   cssls = {},
+  gopls = {
+    settings = {
+      gopls = {
+        analyses = {
+          unusedparams = true,
+        },
+        staticcheck = true,
+        gofumpt = true,
+      },
+    },
+  },
   tailwindcss = {
     root_markers = {
       "tailwind.config.js",
