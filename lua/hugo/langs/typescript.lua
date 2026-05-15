@@ -9,68 +9,78 @@ local function deferred_format(delay)
   end, delay or 100)
 end
 
-local function is_react_import(line)
-  return line:match('^import .+ from ["\']react["\']')
-    or line:match('^import .+ from ["\']react/')
-    or line:match("^import .+ from ['\"]react['\"]")
-    or line:match("^import .+ from ['\"]react/")
+local function get_module_path(stmt)
+  return stmt:match("from%s+['\"]([^'\"]+)['\"]") or ""
 end
 
-local function is_alias_import(line)
-  return line:match('^import .+ from ["\']@/') or line:match("^import .+ from ['\"]@/")
+local function is_react_import(stmt)
+  local path = get_module_path(stmt)
+  return path == "react" or path:match("^react/") ~= nil
 end
 
-local function is_relative_import(line)
-  return line:match('^import .+ from ["\']%.') or line:match("^import .+ from ['\"]%.")
+local function is_alias_import(stmt)
+  return get_module_path(stmt):match("^@/") ~= nil
 end
 
-local function is_import_line(line)
-  return line:match("^import ")
+local function is_relative_import(stmt)
+  return get_module_path(stmt):match("^%.") ~= nil
+end
+
+local function is_module_line(line)
+  return line:match("^import%s")
+    or line:match("^export%s+.+%s+from%s")
+    or line:match("^export%s+[%*{]")
 end
 
 local function sort_imports_custom(bufnr)
   bufnr = bufnr or 0
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
 
-  -- Parse imports into logical statements, handling multi-line imports
-  local import_statements = {} -- each entry is a single-line version of the import
+  -- Parse imports/exports into logical statements, handling multi-line statements
+  local import_statements = {} -- each entry has a single-line version of the statement and attached comments
   local import_end = 0
-  local import_start = 0 -- first line of the import block
-  local in_import = false
-  local current_parts = {}
+  local prefix_lines = {}
+  local pending_leading = {}
+  local i = 1
 
-  for i, line in ipairs(lines) do
-    if in_import then
-      table.insert(current_parts, vim.trim(line))
-      if line:match("from%s+['\"]") or vim.trim(line):match("^}.*from%s+['\"]") then
-        -- End of multi-line import
+  while i <= #lines do
+    local line = lines[i]
+    if line:match("^%s*$") or line:match("^%s*//") then
+      table.insert(pending_leading, line)
+      i = i + 1
+    elseif is_module_line(line) then
+      if import_end == 0 then
+        prefix_lines = pending_leading
+        pending_leading = {}
+      end
+
+      local leading = pending_leading
+      pending_leading = {}
+      local current_parts = { line }
+      local statement_end = i
+
+      local function is_statement_complete()
         local joined = table.concat(current_parts, " ")
-        -- Normalize whitespace: collapse "{ foo ,  bar }" style
-        joined = joined:gsub("%s+", " ")
-        table.insert(import_statements, joined)
-        current_parts = {}
-        in_import = false
-        import_end = i
+        return joined:match("from%s+['\"]") or vim.trim(current_parts[1]):match("^import%s+['\"]")
       end
-    elseif is_import_line(line) then
-      if import_start == 0 then
-        import_start = i
+
+      while statement_end < #lines and not is_statement_complete() do
+        statement_end = statement_end + 1
+        table.insert(current_parts, vim.trim(lines[statement_end]))
       end
-      -- Check if the import is complete on one line (has `from`)
-      if line:match("from%s+['\"]") then
-        table.insert(import_statements, line)
-        import_end = i
-      else
-        -- Multi-line import starts here
-        in_import = true
-        current_parts = { line }
-      end
-    elseif line:match("^%s*$") and import_end > 0 then
-      -- Allow blank lines within import block
-    else
-      if import_end > 0 then
+
+      if not is_statement_complete() then
         break
       end
+
+      local joined = table.concat(current_parts, " ")
+      -- Normalize whitespace: collapse "{ foo ,  bar }" style
+      joined = joined:gsub("%s+", " ")
+      table.insert(import_statements, { stmt = joined, leading = leading })
+      import_end = statement_end
+      i = statement_end + 1
+    else
+      break
     end
   end
 
@@ -79,15 +89,15 @@ local function sort_imports_custom(bufnr)
   end
 
   -- Trim trailing slashes from import paths
-  for i, stmt in ipairs(import_statements) do
-    import_statements[i] = stmt:gsub("(from%s+['\"])(.-)(['\"])", function(prefix, path, suffix)
+  for i, entry in ipairs(import_statements) do
+    import_statements[i].stmt = entry.stmt:gsub("(from%s+['\"])(.-)(['\"])", function(prefix, path, suffix)
       return prefix .. path:gsub("/+$", "") .. suffix
     end)
   end
 
   -- Merge imports that share the same module path
   local function get_path(stmt)
-    return stmt:match("from%s+['\"]([^'\"]+)['\"]") or ""
+    return get_module_path(stmt)
   end
 
   local function extract_names(stmt)
@@ -110,15 +120,16 @@ local function sort_imports_custom(bufnr)
   local merged = {}
   local path_index = {} -- path -> index in merged
 
-  for _, stmt in ipairs(import_statements) do
+  for _, entry in ipairs(import_statements) do
+    local stmt = entry.stmt
     local path = get_path(stmt)
     local names, is_type = extract_names(stmt)
     local existing_idx = path_index[path]
 
-    if names and existing_idx then
+    if names and existing_idx and #entry.leading == 0 then
       -- Merge into existing import with same path
       local existing = merged[existing_idx]
-      local existing_names, existing_is_type = extract_names(existing)
+      local existing_names, existing_is_type = extract_names(existing.stmt)
       if existing_names and existing_is_type == is_type then
         -- Combine name lists, dedup
         local seen = {}
@@ -133,8 +144,8 @@ local function sort_imports_custom(bufnr)
         end
         -- Reconstruct the import
         local keyword = is_type and "import type" or "import"
-        local quote = existing:match("from%s+(['\"])") or "'"
-        merged[existing_idx] = keyword
+        local quote = existing.stmt:match("from%s+(['\"])") or "'"
+        merged[existing_idx].stmt = keyword
           .. " { "
           .. table.concat(existing_names, ", ")
           .. " } from "
@@ -142,10 +153,10 @@ local function sort_imports_custom(bufnr)
           .. path
           .. quote
       else
-        table.insert(merged, stmt)
+        table.insert(merged, entry)
       end
     else
-      table.insert(merged, stmt)
+      table.insert(merged, entry)
       if names then
         path_index[path] = #merged
       end
@@ -161,6 +172,13 @@ local function sort_imports_custom(bufnr)
       before, names, after = stmt:match("^(import%s+type%s+{)(.-)(}%s+from.+)$")
     end
     if not names then
+      -- Try `export {` / `export type {`
+      before, names, after = stmt:match("^(export%s+{)(.-)(}%s+from.+)$")
+    end
+    if not names then
+      before, names, after = stmt:match("^(export%s+type%s+{)(.-)(}%s+from.+)$")
+    end
+    if not names then
       return stmt
     end
     local name_list = {}
@@ -174,8 +192,8 @@ local function sort_imports_custom(bufnr)
     return before .. " " .. table.concat(name_list, ", ") .. " " .. after
   end
 
-  for i, stmt in ipairs(import_statements) do
-    import_statements[i] = sort_named_imports(stmt)
+  for i, entry in ipairs(import_statements) do
+    import_statements[i].stmt = sort_named_imports(entry.stmt)
   end
 
   -- Classify imports into groups
@@ -184,25 +202,21 @@ local function sort_imports_custom(bufnr)
   local alias_imports = {}
   local relative_imports = {}
 
-  for _, stmt in ipairs(import_statements) do
-    if is_react_import(stmt) then
-      table.insert(react_imports, stmt)
-    elseif is_alias_import(stmt) then
-      table.insert(alias_imports, stmt)
-    elseif is_relative_import(stmt) then
-      table.insert(relative_imports, stmt)
+  for _, entry in ipairs(import_statements) do
+    if is_react_import(entry.stmt) then
+      table.insert(react_imports, entry)
+    elseif is_alias_import(entry.stmt) then
+      table.insert(alias_imports, entry)
+    elseif is_relative_import(entry.stmt) then
+      table.insert(relative_imports, entry)
     else
-      table.insert(external_imports, stmt)
+      table.insert(external_imports, entry)
     end
   end
 
   -- Sort by module path (the `from '...'` part), not by imported names
-  local function get_module_path(stmt)
-    return stmt:match("from%s+['\"]([^'\"]+)['\"]") or ""
-  end
-
   local function sort_by_path(a, b)
-    return get_module_path(a) < get_module_path(b)
+    return get_module_path(a.stmt) < get_module_path(b.stmt)
   end
 
   table.sort(react_imports, sort_by_path)
@@ -210,9 +224,9 @@ local function sort_imports_custom(bufnr)
   table.sort(alias_imports, sort_by_path)
 
   -- Sort relative imports: more ../ first, then by path
-  local function count_parent_dirs(stmt)
+  local function count_parent_dirs(entry)
     local count = 0
-    for _ in get_module_path(stmt):gmatch("%.%./") do
+    for _ in get_module_path(entry.stmt):gmatch("%.%./") do
       count = count + 1
     end
     return count
@@ -223,13 +237,13 @@ local function sort_imports_custom(bufnr)
     if da ~= db then
       return da > db
     end
-    return get_module_path(a) < get_module_path(b)
+    return get_module_path(a.stmt) < get_module_path(b.stmt)
   end)
 
-  -- Build new import block, preserving lines before imports (e.g. /// <reference>)
+  -- Build new import/export block, preserving lines before imports (e.g. /// <reference>)
   local new_lines = {}
-  for i = 1, import_start - 1 do
-    table.insert(new_lines, lines[i])
+  for _, line in ipairs(prefix_lines) do
+    table.insert(new_lines, line)
   end
 
   local function add_group(group)
@@ -237,8 +251,13 @@ local function sort_imports_custom(bufnr)
       if #new_lines > 0 then
         table.insert(new_lines, "")
       end
-      for _, l in ipairs(group) do
-        table.insert(new_lines, l)
+      for _, entry in ipairs(group) do
+        for _, l in ipairs(entry.leading) do
+          if #new_lines > 0 or not l:match("^%s*$") then
+            table.insert(new_lines, l)
+          end
+        end
+        table.insert(new_lines, entry.stmt)
       end
     end
   end
