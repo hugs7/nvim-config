@@ -27,7 +27,9 @@ require('hugo.ui.telescope')
 -- =========================
 -- Tools
 -- =========================
-require("gitsigns").setup()
+-- gitsigns is configured via lazy.nvim (lua/hugo/lazy.lua); do not call
+-- require("gitsigns").setup() here or it loads before lazy's opts apply and
+-- causes "attempt to index field 'repo' (a nil value)" in current_line_blame.
 require('hugo.tools.autocomplete')
 require('hugo.tools.debug')
 require('hugo.tools.lsp')
