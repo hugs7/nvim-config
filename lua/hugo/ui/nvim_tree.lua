@@ -111,6 +111,13 @@ require("nvim-tree").setup({
                 print("Not a directory or symlink node")
             end
         end, opts("Change directory and tree root to selected"))
+
+        vim.keymap.set("n", "gR", function()
+            vim.cmd("cd " .. vim.fn.fnameescape(initial_root))
+            api.tree.change_root(initial_root)
+            M.restore_width()
+            print("Reset tree root to: " .. initial_root)
+        end, opts("Reset tree root to startup directory"))
     end,
     tab = {
         sync = {
