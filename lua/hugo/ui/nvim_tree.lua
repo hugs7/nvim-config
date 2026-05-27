@@ -134,7 +134,7 @@ require("nvim-tree").setup({
         root_folder_label = false,
     },
     view = {
-        width = 35,
+        width = nvim_tree_width,
         preserve_window_proportions = true,
     },
     filters = {
@@ -152,48 +152,36 @@ require("nvim-tree").setup({
 -- Preserve NvimTree width
 -- =========================
 
--- Track the last manually set width
-local nvim_tree_width = 35
-
 -- Set winfixwidth when the tree opens so :vs doesn't shrink it
 vim.api.nvim_create_autocmd("FileType", {
     pattern = "NvimTree",
     callback = function()
         vim.wo.winfixwidth = true
         vim.wo.winbar = ""
+        M.restore_width()
     end,
 })
 
--- Remember width when manually resized (e.g. via <leader>= / <leader>-)
+-- Remember mouse/command resizes only when the tree itself is focused. Layout
+-- changes while opening files can temporarily stretch the tree; those should be
+-- corrected, not saved as the user's preferred width.
 vim.api.nvim_create_autocmd("WinResized", {
     callback = function()
-        for _, winid in ipairs(vim.v.event.windows) do
-            if vim.api.nvim_win_is_valid(winid) then
-                local buf = vim.api.nvim_win_get_buf(winid)
-                if vim.bo[buf].filetype == "NvimTree" then
-                    nvim_tree_width = vim.api.nvim_win_get_width(winid)
-                end
-            end
+        local tree_win = get_tree_win()
+        if tree_win and vim.api.nvim_get_current_win() == tree_win then
+            nvim_tree_width = clamp_tree_width(vim.api.nvim_win_get_width(tree_win))
         end
     end,
 })
 
 -- Restore width after splits or other layout changes
-vim.api.nvim_create_autocmd("WinEnter", {
+vim.api.nvim_create_autocmd({ "WinEnter", "BufWinEnter", "WinNew", "VimResized" }, {
     callback = function()
         local api = require("nvim-tree.api")
         if not api.tree.is_visible() then
             return
         end
-        vim.schedule(function()
-            local tree_win = require("nvim-tree.view").get_winnr()
-            if tree_win and vim.api.nvim_win_is_valid(tree_win) then
-                local current = vim.api.nvim_win_get_width(tree_win)
-                if current ~= nvim_tree_width then
-                    vim.api.nvim_win_set_width(tree_win, nvim_tree_width)
-                end
-            end
-        end)
+        M.restore_width()
     end,
 })
 
@@ -285,5 +273,8 @@ vim.api.nvim_create_autocmd("BufEnter", {
             open = true,
             focus = false
         })
+        M.restore_width()
     end
 })
+
+return M
