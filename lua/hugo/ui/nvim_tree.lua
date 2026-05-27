@@ -1,3 +1,58 @@
+local M = {}
+
+local DEFAULT_TREE_WIDTH = 35
+local MIN_TREE_WIDTH = 20
+local MIN_EDITOR_WIDTH = 50
+local initial_root = (vim.uv or vim.loop).cwd() or vim.fn.getcwd()
+local nvim_tree_width = DEFAULT_TREE_WIDTH
+
+local function max_tree_width()
+    return math.max(MIN_TREE_WIDTH, vim.o.columns - MIN_EDITOR_WIDTH)
+end
+
+local function clamp_tree_width(width)
+    return math.max(MIN_TREE_WIDTH, math.min(width, max_tree_width()))
+end
+
+local function get_tree_win()
+    local ok, view = pcall(require, "nvim-tree.view")
+    if not ok then
+        return nil
+    end
+    local win = view.get_winnr()
+    if win and vim.api.nvim_win_is_valid(win) then
+        return win
+    end
+    return nil
+end
+
+local function apply_tree_width()
+    local win = get_tree_win()
+    if not win then
+        return
+    end
+
+    nvim_tree_width = clamp_tree_width(nvim_tree_width)
+    vim.wo[win].winfixwidth = true
+
+    if vim.api.nvim_win_get_width(win) ~= nvim_tree_width then
+        vim.api.nvim_win_set_width(win, nvim_tree_width)
+    end
+end
+
+function M.set_width(width)
+    nvim_tree_width = clamp_tree_width(width)
+    vim.schedule(apply_tree_width)
+end
+
+function M.adjust_width(delta)
+    M.set_width(nvim_tree_width + delta)
+end
+
+function M.restore_width()
+    vim.schedule(apply_tree_width)
+end
+
 require("nvim-tree").setup({
     on_attach = function(bufnr)
         local api = require("nvim-tree.api")

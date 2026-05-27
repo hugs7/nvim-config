@@ -35,19 +35,39 @@ vim.keymap.set("n", "<C-p>", ":Telescope find_files<CR>", {
 })
 
 -- Adjust Nvim Tree Width
-vim.keymap.set("n", "<leader>=", "<cmd>vertical resize +5<CR>", {
+vim.keymap.set("n", "<leader>=", function()
+  require("hugo.ui.nvim_tree").adjust_width(10)
+end, {
   desc = "Increase NvimTree width"
 })
-vim.keymap.set("n", "<leader>-", "<cmd>vertical resize -5<CR>", {
+vim.keymap.set("n", "<leader>-", function()
+  require("hugo.ui.nvim_tree").adjust_width(-10)
+end, {
   desc = "Decrease NvimTree width"
+})
+vim.keymap.set("n", "<leader>w=", function()
+  require("hugo.ui.nvim_tree").adjust_width(2)
+end, {
+  desc = "Fine increase NvimTree width"
+})
+vim.keymap.set("n", "<leader>w-", function()
+  require("hugo.ui.nvim_tree").adjust_width(-2)
+end, {
+  desc = "Fine decrease NvimTree width"
 })
 
 -- Adjust pane height
-vim.keymap.set("n", "<leader>+", "<cmd>resize +5<CR>", {
+vim.keymap.set("n", "<leader>+", "<cmd>resize +10<CR>", {
   desc = "Increase pane height"
 })
-vim.keymap.set("n", "<leader>_", "<cmd>resize -5<CR>", {
+vim.keymap.set("n", "<leader>_", "<cmd>resize -10<CR>", {
   desc = "Decrease pane height"
+})
+vim.keymap.set("n", "<leader>h+", "<cmd>resize +2<CR>", {
+  desc = "Fine increase pane height"
+})
+vim.keymap.set("n", "<leader>h_", "<cmd>resize -2<CR>", {
+  desc = "Fine decrease pane height"
 })
 
 -- =========================
