@@ -2,6 +2,113 @@
 -- Telescope Setup
 -- =========================
 local holo = require("hugo.ui.holo_borders")
+local previewers = require("telescope.previewers")
+
+local hard_exclude_globs = {
+  "!.git/**",
+  "!**/.git/**",
+  "!node_modules/**",
+  "!**/node_modules/**",
+  "!.next/**",
+  "!**/.next/**",
+  "!.nx/**",
+  "!**/.nx/**",
+  "!coverage/**",
+  "!**/coverage/**",
+  "!tmp/**",
+  "!**/tmp/**",
+}
+
+local conditional_gitignored_dirs = {
+  "build",
+  "dist",
+  "out",
+}
+
+local file_ignore_patterns = {
+  "node_modules/",
+  "%.git/",
+  "%.next/",
+  "%.nx/",
+  "coverage/",
+  "tmp/",
+}
+
+local function is_git_ignored(path)
+  if vim.fn.isdirectory(path) ~= 1 then
+    return false
+  end
+
+  vim.fn.system({ "git", "check-ignore", "-q", path })
+  return vim.v.shell_error == 0
+end
+
+local function rg_hard_exclude_args()
+  local args = {}
+  for _, glob in ipairs(hard_exclude_globs) do
+    args[#args + 1] = "--glob"
+    args[#args + 1] = glob
+  end
+  for _, dir in ipairs(conditional_gitignored_dirs) do
+    if is_git_ignored(dir) then
+      args[#args + 1] = "--glob"
+      args[#args + 1] = "!" .. dir .. "/**"
+    end
+  end
+  return args
+end
+
+local function vimgrep_arguments(use_hard_excludes)
+  local args = {
+    "rg",
+    "--color=never",
+    "--no-heading",
+    "--with-filename",
+    "--line-number",
+    "--column",
+    "--smart-case",
+    "--hidden",
+    "--follow",
+    "--no-ignore",
+  }
+
+  if use_hard_excludes then
+    return vim.list_extend(args, rg_hard_exclude_args())
+  end
+
+  args[#args + 1] = "--glob"
+  args[#args + 1] = "!.git/**"
+  args[#args + 1] = "--glob"
+  args[#args + 1] = "!**/.git/**"
+  return args
+end
+
+local function find_files_command(use_hard_excludes)
+  local command = { "rg", "--files", "--hidden", "--follow", "--no-ignore" }
+  if use_hard_excludes then
+    vim.list_extend(command, rg_hard_exclude_args())
+  else
+    command[#command + 1] = "--glob"
+    command[#command + 1] = "!.git/**"
+    command[#command + 1] = "--glob"
+    command[#command + 1] = "!**/.git/**"
+  end
+  return command
+end
+
+local original_buffer_previewer_maker = previewers.buffer_previewer_maker
+previewers.buffer_previewer_maker = function(filepath, bufnr, opts)
+  local stat = vim.uv.fs_stat(filepath)
+  if stat and stat.size > 1024 * 1024 then
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {
+      "Preview disabled for files larger than 1MB.",
+      "Open the file to view it.",
+    })
+    return
+  end
+
+  original_buffer_previewer_maker(filepath, bufnr, opts)
+end
 
 vim.api.nvim_set_hl(0, "TelescopeBorder", { fg = "#00e5ff", bg = "#0a0e14" })
 vim.api.nvim_set_hl(0, "TelescopePromptBorder", { fg = "#00e5ff", bg = "#0a0e14" })
@@ -18,14 +125,16 @@ vim.api.nvim_set_hl(0, "TelescopePreviewNormal", { bg = "#0a0e14" })
 
 require('telescope').setup({
   defaults = {
-    file_ignore_patterns = { "node_modules/", ".git/", "dist/", "build/", ".next/", ".nx", "coverage/" },
+    file_ignore_patterns = file_ignore_patterns,
     borderchars = { "─", "│", "─", "│", "╭", "╮", "╯", "╰" },
+    vimgrep_arguments = vimgrep_arguments(true),
   },
   pickers = {
     find_files = {
-      hidden = true,           -- Show hidden files (files starting with .)
-      no_ignore = true,        -- Include gitignored files
-      no_ignore_parent = true, -- Include files ignored by parent .gitignore
+      hidden = true,
+      no_ignore = true,
+      no_ignore_parent = true,
+      find_command = find_files_command(true),
     },
   },
 })
@@ -34,8 +143,32 @@ require('telescope').setup({
 -- Telescope keymaps
 -- =========================
 local builtin = require("telescope.builtin")
-vim.keymap.set("n", "<leader>ff", builtin.find_files, {})
-vim.keymap.set("n", "<leader>fg", builtin.live_grep, {})
+vim.keymap.set("n", "<leader>ff", function()
+  builtin.find_files({
+    hidden = true,
+    no_ignore = true,
+    no_ignore_parent = true,
+    find_command = find_files_command(true),
+  })
+end, { desc = "Find files" })
+vim.keymap.set("n", "<leader>fg", function()
+  builtin.live_grep({
+    vimgrep_arguments = vimgrep_arguments(true),
+  })
+end, { desc = "Live grep" })
+vim.keymap.set("n", "<leader>fF", function()
+  builtin.find_files({
+    hidden = true,
+    no_ignore = true,
+    no_ignore_parent = true,
+    find_command = find_files_command(false),
+  })
+end, { desc = "Find files without hard excludes" })
+vim.keymap.set("n", "<leader>fG", function()
+  builtin.live_grep({
+    vimgrep_arguments = vimgrep_arguments(false),
+  })
+end, { desc = "Live grep without hard excludes" })
 vim.keymap.set("n", "<leader>fb", builtin.buffers, {})
 vim.keymap.set("n", "<leader>fh", builtin.help_tags, {})
 vim.keymap.set("n", "<leader>fw", builtin.grep_string, { desc = "Find word under cursor" })
