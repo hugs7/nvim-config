@@ -19,10 +19,10 @@ local hard_exclude_globs = {
   "!**/tmp/**",
 }
 
-local conditional_gitignored_dirs = {
-  "build",
-  "dist",
-  "out",
+local conditional_gitignored_dir_names = {
+  build = true,
+  dist = true,
+  out = true,
 }
 
 local file_ignore_patterns = {
@@ -34,13 +34,32 @@ local file_ignore_patterns = {
   "tmp/",
 }
 
-local function is_git_ignored(path)
-  if vim.fn.isdirectory(path) ~= 1 then
-    return false
+local function gitignored_output_dir_globs()
+  if vim.fn.executable("git") ~= 1 then
+    return {}
   end
 
-  vim.fn.system({ "git", "check-ignore", "-q", path })
-  return vim.v.shell_error == 0
+  local ignored_dirs = vim.fn.systemlist({
+    "git",
+    "ls-files",
+    "--others",
+    "--ignored",
+    "--exclude-standard",
+    "--directory",
+  })
+  if vim.v.shell_error ~= 0 then
+    return {}
+  end
+
+  local globs = {}
+  for _, dir in ipairs(ignored_dirs) do
+    local normalized = dir:gsub("/+$", "")
+    local name = normalized:match("([^/]+)$")
+    if name and conditional_gitignored_dir_names[name] then
+      globs[#globs + 1] = "!" .. normalized .. "/**"
+    end
+  end
+  return globs
 end
 
 local function rg_hard_exclude_args()
@@ -49,11 +68,9 @@ local function rg_hard_exclude_args()
     args[#args + 1] = "--glob"
     args[#args + 1] = glob
   end
-  for _, dir in ipairs(conditional_gitignored_dirs) do
-    if is_git_ignored(dir) then
-      args[#args + 1] = "--glob"
-      args[#args + 1] = "!" .. dir .. "/**"
-    end
+  for _, glob in ipairs(gitignored_output_dir_globs()) do
+    args[#args + 1] = "--glob"
+    args[#args + 1] = glob
   end
   return args
 end
