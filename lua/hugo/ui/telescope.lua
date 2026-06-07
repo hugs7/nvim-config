@@ -1,8 +1,129 @@
 -- =========================
 -- Telescope Setup
 -- =========================
-local holo = require("hugo.ui.holo_borders")
+local actions = require("telescope.actions")
 local previewers = require("telescope.previewers")
+
+local function picker_history_key(picker)
+  if not picker then
+    return "global"
+  end
+
+  return picker.prompt_title or picker.results_title or "global"
+end
+
+local function read_picker_history(path)
+  local ok, lines = pcall(vim.fn.readfile, path)
+  if not ok or #lines == 0 then
+    return {}
+  end
+
+  local decoded_ok, decoded = pcall(vim.json.decode, table.concat(lines, "\n"))
+  if decoded_ok and type(decoded) == "table" then
+    return decoded
+  end
+
+  return { global = lines }
+end
+
+local function write_picker_history(path, history)
+  vim.fn.mkdir(vim.fn.fnamemodify(path, ":h"), "p")
+  vim.fn.writefile({ vim.json.encode(history) }, path)
+end
+
+local function repo_history_path()
+  local cwd = vim.fn.getcwd()
+  local git_root = vim.fn.systemlist({ "git", "-C", cwd, "rev-parse", "--show-toplevel" })[1]
+  local root = vim.v.shell_error == 0 and git_root or cwd
+  local name = vim.fn.fnamemodify(root, ":t")
+  local hash = vim.fn.sha256(root)
+
+  return vim.fn.stdpath("data") .. "/telescope_picker_history/" .. name .. "-" .. hash .. ".json"
+end
+
+local function get_picker_history()
+  local config = require("telescope.config").values
+  local path = repo_history_path()
+  local limit = config.history.limit
+  local cycle_wrap = config.history.cycle_wrap
+  local content = read_picker_history(path)
+  local indexes = {}
+
+  local function entries_for(picker)
+    local key = picker_history_key(picker)
+    content[key] = content[key] or {}
+    indexes[key] = indexes[key] or (#content[key] + 1)
+    return key, content[key]
+  end
+
+  local function save()
+    write_picker_history(path, content)
+  end
+
+  return {
+    reset = function()
+      for key, entries in pairs(content) do
+        indexes[key] = #entries + 1
+      end
+    end,
+    append = function(_, line, picker, no_reset)
+      if line == "" then
+        return
+      end
+
+      local key, entries = entries_for(picker)
+      if entries[#entries] ~= line then
+        entries[#entries + 1] = line
+
+        if limit and #entries > limit then
+          local extra = #entries - limit
+          for _ = 1, extra do
+            table.remove(entries, 1)
+          end
+        end
+
+        save()
+      end
+
+      if not no_reset then
+        indexes[key] = #entries + 1
+      end
+    end,
+    get_next = function(_, _, picker)
+      local key, entries = entries_for(picker)
+      local next_index = indexes[key] + 1
+      if next_index > #entries and cycle_wrap then
+        next_index = 1
+      end
+
+      if next_index <= #entries then
+        indexes[key] = next_index
+        return entries[next_index]
+      end
+
+      indexes[key] = #entries + 1
+      return nil
+    end,
+    get_prev = function(self, line, picker)
+      local key, entries = entries_for(picker)
+      local next_index = indexes[key] - 1
+      if next_index < 1 and cycle_wrap then
+        next_index = #entries
+      end
+
+      if indexes[key] == #entries + 1 and line ~= "" then
+        self:append(line, picker, true)
+      end
+
+      if next_index >= 1 then
+        indexes[key] = next_index
+        return entries[next_index]
+      end
+
+      return nil
+    end,
+  }
+end
 
 local hard_exclude_globs = {
   "!.git/**",
@@ -144,6 +265,26 @@ require('telescope').setup({
   defaults = {
     file_ignore_patterns = file_ignore_patterns,
     borderchars = { "─", "│", "─", "│", "╭", "╮", "╯", "╰" },
+    history = {
+      path = repo_history_path(),
+      limit = 200,
+      cycle_wrap = true,
+      handler = get_picker_history,
+    },
+    mappings = {
+      i = {
+        ["<C-Up>"] = actions.cycle_history_prev,
+        ["<C-Down>"] = actions.cycle_history_next,
+        ["<M-p>"] = actions.cycle_history_prev,
+        ["<M-n>"] = actions.cycle_history_next,
+      },
+      n = {
+        ["<C-Up>"] = actions.cycle_history_prev,
+        ["<C-Down>"] = actions.cycle_history_next,
+        ["<M-p>"] = actions.cycle_history_prev,
+        ["<M-n>"] = actions.cycle_history_next,
+      },
+    },
     vimgrep_arguments = vimgrep_arguments(true),
   },
   pickers = {
