@@ -14,6 +14,19 @@ local function clamp_tree_width(width)
     return math.max(MIN_TREE_WIDTH, math.min(width, max_tree_width()))
 end
 
+-- Count non-floating windows other than the tree (i.e. real editor windows).
+-- Used to avoid saving the width when the tree is the only window and has
+-- stretched to fill the screen.
+local function count_editor_windows(tree_win)
+    local count = 0
+    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+        if win ~= tree_win and vim.api.nvim_win_get_config(win).relative == "" then
+            count = count + 1
+        end
+    end
+    return count
+end
+
 local function get_tree_win()
     local ok, view = pcall(require, "nvim-tree.view")
     if not ok then
@@ -42,15 +55,18 @@ end
 
 function M.set_width(width)
     nvim_tree_width = clamp_tree_width(width)
-    vim.schedule(apply_tree_width)
+    apply_tree_width()
 end
 
 function M.adjust_width(delta)
     M.set_width(nvim_tree_width + delta)
 end
 
+-- Restore synchronously so the correct width is in place before the screen
+-- redraws. Scheduling it would let a transiently-wrong width render first,
+-- producing a visible flicker.
 function M.restore_width()
-    vim.schedule(apply_tree_width)
+    apply_tree_width()
 end
 
 require("nvim-tree").setup({
@@ -137,6 +153,13 @@ require("nvim-tree").setup({
         width = nvim_tree_width,
         preserve_window_proportions = true,
     },
+    actions = {
+        open_file = {
+            -- Don't let nvim-tree resize windows when opening a file; we manage
+            -- the sidebar width ourselves. Prevents resize churn / flicker.
+            resize_window = false,
+        },
+    },
     filters = {
         git_ignored = false,
         dotfiles = false,
@@ -162,20 +185,48 @@ vim.api.nvim_create_autocmd("FileType", {
     end,
 })
 
--- Remember mouse/command resizes only when the tree itself is focused. Layout
--- changes while opening files can temporarily stretch the tree; those should be
--- corrected, not saved as the user's preferred width.
+-- Remember mouse/command resizes. Layout changes while opening files can
+-- temporarily stretch the tree, and closing the last editor window makes the
+-- tree fill the screen. To avoid saving those transient/garbage widths, we
+-- debounce: wait for the layout to settle, then save only if the tree is still
+-- a sidebar (an editor window exists) and the width is within range. By the
+-- time this runs, restore_width() has already corrected any transient stretch,
+-- while a genuine mouse drag (from either side) persists and gets saved.
+local save_pending = false
+local function schedule_width_save()
+    if save_pending then
+        return
+    end
+    save_pending = true
+    vim.defer_fn(function()
+        save_pending = false
+        local tree_win = get_tree_win()
+        if not tree_win then
+            return
+        end
+        -- Don't save when the tree is the only window (it has filled the screen).
+        if count_editor_windows(tree_win) == 0 then
+            return
+        end
+        local width = vim.api.nvim_win_get_width(tree_win)
+        if width >= MIN_TREE_WIDTH and width <= max_tree_width() then
+            nvim_tree_width = width
+        end
+    end, 50)
+end
+
 vim.api.nvim_create_autocmd("WinResized", {
     callback = function()
-        local tree_win = get_tree_win()
-        if tree_win and vim.api.nvim_get_current_win() == tree_win then
-            nvim_tree_width = clamp_tree_width(vim.api.nvim_win_get_width(tree_win))
+        if get_tree_win() then
+            schedule_width_save()
         end
     end,
 })
 
--- Restore width after splits or other layout changes
-vim.api.nvim_create_autocmd({ "WinEnter", "BufWinEnter", "WinNew", "VimResized" }, {
+-- Restore width after structural layout changes (splits opened/closed, terminal
+-- resized). WinEnter was dropped: it fires on every focus change and adds churn
+-- without catching anything these events miss.
+vim.api.nvim_create_autocmd({ "WinNew", "WinClosed", "BufWinEnter", "VimResized" }, {
     callback = function()
         local api = require("nvim-tree.api")
         if not api.tree.is_visible() then
