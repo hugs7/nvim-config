@@ -128,6 +128,8 @@ end
 local hard_exclude_globs = {
   "!.git/**",
   "!**/.git/**",
+  "!.VSCodeCounter/**",
+  "!**/.VSCodeCounter/**",
   "!node_modules/**",
   "!**/node_modules/**",
   "!.next/**",
