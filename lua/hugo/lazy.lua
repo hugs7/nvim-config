@@ -54,9 +54,9 @@ local lazy_plugins = {
     "nvim-treesitter/nvim-treesitter",
     build = ":TSUpdate",
     config = function()
-      require("nvim-treesitter").setup({
-        ensure_installed = { "lua", "typescript", "javascript", "json", "tsx", "html", "css", "go", "gomod", "gosum", "gowork" },
-      })
+      local treesitter = require("nvim-treesitter")
+      treesitter.setup()
+      treesitter.install({ "lua", "typescript", "javascript", "json", "tsx", "html", "css", "go", "gomod", "gosum", "gowork" })
     end,
   },
 
