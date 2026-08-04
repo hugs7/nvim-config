@@ -50,6 +50,7 @@ end
 -- Configure wildignore to exclude common gitignored patterns for vimgrep
 vim.opt.wildignore:append({
   "*/node_modules/*",
+  "*/.VSCodeCounter/*",
   "*/.git/*",
   "*/dist/*",
   "*/build/*",
